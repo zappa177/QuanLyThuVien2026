@@ -44,12 +44,12 @@ jobs:
 
     steps:
       - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4.1.8
         with:
           name: .net-app
       
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v2.1.1
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_89828CE844134951BBBCFF7A2107616B }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B141F568DFBB4DAA8759C9E19C434809 }}
@@ -57,7 +57,7 @@ jobs:
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v3.0.1
         with:
           app-name: 'quanlythuvien'
           slot-name: 'Production'
