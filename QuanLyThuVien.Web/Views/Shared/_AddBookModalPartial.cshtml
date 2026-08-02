@@ -1,0 +1,103 @@
+﻿@using QuanLyThuVien.Domain.Enums
+
+<!-- dành cho admin -->
+@if (User.IsInRole("Admin"))
+{
+    <!-- Modal Bootstrap 5 -->
+    <div class="modal fade" id="addBookModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0" style="background-color: #f4f4f4;">
+                <div class="modal-body p-4 position-relative">
+
+                    <!-- Nút Xtắt Modal -->
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+
+                    <form id="addBookForm" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+
+                        <!-- Form Fields -->
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Tên sách :</label>
+                            <div class="col-8">
+                                <input type="text" name="Title" class="form-control form-control-sm border-0 rounded-0" required />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Thể loại :</label>
+                            <div class="col-8">
+                                <select name="CategoryId" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Categories" required>
+                                    <option value="">-- Chọn --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Vị trí :</label>
+                            <div class="col-8 d-flex align-items-center gap-2">
+                                <span>Kệ</span>
+                                <select id="shelfSelect" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Shelves" required>
+                                    <option value="">-- Chọn --</option>
+                                </select>
+                                <span>Tầng</span>
+                                <select id="tierSelect" name="ShelfTierId" class="form-select form-select-sm border-0 rounded-0" required disabled>
+                                    <option value="">-- Chọn kệ trước --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Mã sách :</label>
+                            <div class="col-8">
+                                <input type="text" name="ISBN" class="form-control form-control-sm border-0 rounded-0" required />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Tác giả :</label>
+                            <div class="col-8">
+                                <input type="text" name="Author" class="form-control form-control-sm border-0 rounded-0" required />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Năm xuất bản :</label>
+                            <div class="col-8">
+                                <input type="number" name="PublishYear" class="form-control form-control-sm border-0 rounded-0" required />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Nhà xuất bản :</label>
+                            <div class="col-8">
+                                <input type="text" name="Publisher" class="form-control form-control-sm border-0 rounded-0" required />
+                            </div>
+                        </div>
+
+                        <div class="row mb-2 align-items-center">
+                            <label class="col-4 text-end mb-0">Tình trạng :</label>
+                            <div class="col-8">
+                                <!-- Render tự động Enum BookStatus -->
+                                <select name="Status" class="form-select form-select-sm border-0 rounded-0" asp-items="Html.GetEnumSelectList<BookStatus>()" required></select>
+                            </div>
+                        </div>
+
+                        <!-- Chọn ảnh bìa -->
+                        <div class="text-center mt-4 mb-3">
+                            <input type="file" id="imageInput" name="CoverImage" class="d-none" accept="image/*" />
+                            <div id="imagePreviewContainer" style="cursor: pointer; display: inline-block; width: 80%; height: 200px; background: url('/images/placeholder-grid.png') center/cover; border: 1px dashed #ccc;" title="Bấm để chọn ảnh">
+                                <img id="imagePreview" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;" />
+                            </div>
+                        </div>
+
+                        <!-- Lưu -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-success px-5 rounded-0 border-0" id="btnSaveBook">Lưu</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+}

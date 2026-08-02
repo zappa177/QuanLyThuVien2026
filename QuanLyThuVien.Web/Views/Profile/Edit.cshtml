@@ -1,0 +1,50 @@
+﻿@model QuanLyThuVien.Web.Models.UserProfileViewModel
+
+<div class="container-fluid mt-5" style="max-width: 600px;">
+    <h3 class="mb-4 text-center">Quản lý thông tin cá nhân</h3>
+
+    @if (ViewBag.SuccessMessage != null)
+    {
+        <div class="alert alert-success text-center">@ViewBag.SuccessMessage</div>
+    }
+
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+    <form asp-action="Edit" method="post">
+        <div class="mb-3 row align-items-center">
+            <label class="col-sm-3 col-form-label text-end fw-bold">Tên :</label>
+            <div class="col-sm-9">
+                <input asp-for="FullName" class="form-control rounded-0 bg-light" required />
+            </div>
+        </div>
+
+        <div class="mb-3 row align-items-center">
+            <label class="col-sm-3 col-form-label text-end fw-bold">Email :</label>
+            <div class="col-sm-9">
+                <input asp-for="Email" type="email" class="form-control rounded-0 bg-light" />
+            </div>
+        </div>
+
+        <div class="mb-3 row align-items-center">
+            <label class="col-sm-3 col-form-label text-end fw-bold">Số điện thoại :</label>
+            <div class="col-sm-9">
+                <input asp-for="PhoneNumber" class="form-control rounded-0 bg-light" />
+            </div>
+        </div>
+
+        <!-- Chỉ hiển thị ô Lớp nếu user là Khách (Reader) đúng như giao diện yêu cầu -->
+        @if (Model.IsReader)
+        {
+            <div class="mb-3 row align-items-center">
+                <label class="col-sm-3 col-form-label text-end fw-bold">Lớp :</label>
+                <div class="col-sm-9">
+                    <input asp-for="ClassName" class="form-control rounded-0 bg-light" />
+                </div>
+            </div>
+        }
+
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-success px-5 rounded-0">Lưu</button>
+        </div>
+    </form>
+</div>

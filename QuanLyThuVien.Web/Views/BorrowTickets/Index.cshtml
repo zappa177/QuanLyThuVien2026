@@ -1,0 +1,376 @@
+﻿@model QuanLyThuVien.Web.Models.BorrowTicketIndexViewModel
+@using QuanLyThuVien.Domain.Enums
+
+<div class="container-fluid py-4">
+    <!-- KHU VỰC TÌM KIẾM -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body bg-light">
+            <form id="searchForm" method="get" asp-action="Index">
+                <div class="row g-3 align-items-center">
+
+                    <!-- Mã phiếu: Hiển thị cho tất cả -->
+                    <div class="col-md-3">
+                        <label class="form-label mb-1">Mã phiếu</label>
+                        <input type="text" asp-for="SearchTicketId" class="form-control rounded-0 border-0" />
+                    </div>
+
+                    <!-- TÊN NGƯỜI MƯỢN: CHỈ ADMIN VÀ THỦ THƯ MỚI CÓ -->
+                    @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Tên người mượn</label>
+                            <input type="text" asp-for="SearchBorrower" class="form-control rounded-0 border-0" />
+                        </div>
+                    }
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Từ ngày</label>
+                        <input type="date" asp-for="FromDate" class="form-control rounded-0 border-0" />
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label mb-1">Đến ngày</label>
+                        <input type="date" asp-for="ToDate" class="form-control rounded-0 border-0" />
+                    </div>
+
+                    <div class="col-md-2 d-flex flex-column justify-content-end">
+                        <label class="form-label mb-1">Tình trạng</label>
+                        <select asp-for="Status" asp-items="Html.GetEnumSelectList<BorrowStatus>()" class="form-select rounded-0 border-0">
+                            <option value="">-- Tất cả --</option>
+                        </select>
+                    </div>
+
+                    <div class="col-12 text-end mt-3">
+                        <button type="submit" class="btn btn-warning px-5 rounded-0 border-0">Tìm kiếm</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- KHU VỰC SẮP XẾP -->
+    <div class="d-flex align-items-center mb-3">
+        <span class="me-2">Sắp xếp :</span>
+        <select name="sortOrder" form="searchForm" class="form-select form-select-sm border-0 bg-info text-dark rounded-0 fw-bold w-auto" onchange="this.form.submit()">
+            @if (ViewBag.CurrentSort == "date_desc")
+            {
+                <option value="date_desc" selected>Ngày mượn (Mới nhất)</option>
+                <option value="date_asc">Ngày mượn (Cũ nhất)</option>
+            }
+            else
+            {
+                <option value="date_desc">Ngày mượn (Mới nhất)</option>
+                <option value="date_asc" selected>Ngày mượn (Cũ nhất)</option>
+            }
+        </select>
+    </div>
+
+    <!-- KHU VỰC DANH SÁCH (LƯỚI 3x3) -->
+    <div class="row g-4">
+        @if (Model.Tickets != null && Model.Tickets.Items.Any())
+        {
+            @foreach (var ticket in Model.Tickets.Items)
+            {
+                <div class="col-12 col-sm-6 col-md-4">
+                    <div class="card h-100 shadow-sm border-0 ticket-item" data-id="@ticket.Id" style="cursor: pointer; background-color: #fcfcfc;">
+                        <div class="card-body text-center p-4">
+                            <h4 class="fw-bold mb-3">Phiếu số @ticket.Id</h4>
+                            <div class="text-start" style="font-size: 0.9rem;">
+                                <p class="mb-1">Người mượn : @ticket.Reader?.ApplicationUser?.FullName</p>
+                                <p class="mb-1">Ngày mượn : @ticket.BorrowDate.ToString("dd/MM/yyyy")</p>
+                                <p class="mb-3">Tình trạng : <span class="fw-bold">@ticket.Status</span></p>
+                                <p class="mb-1">Chú thích :</p>
+                                <div class="bg-light p-2" style="min-height: 80px; border: 1px solid #eee;">
+                                    @ticket.Note
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="col-12 text-center py-5">
+                <h5 class="text-muted">Không tìm thấy phiếu mượn nào.</h5>
+            </div>
+        }
+    </div>
+
+    <!-- PHÂN TRANG -->
+    @if (Model.Tickets != null && Model.Tickets.TotalPages > 1)
+    {
+        <div class="d-flex justify-content-center mt-5">
+            <ul class="pagination border-0">
+
+                <!-- Nút Trước (Previous) -->
+                <li class="page-item @(Model.Tickets.PageNumber <= 1 ? "disabled" : "")">
+                    <a class="page-link text-success fw-bold" href="@Url.Action("Index", new
+                       {
+                           page = Model.Tickets.PageNumber - 1,
+                           ticketId = Model.SearchTicketId,
+                           borrower = Model.SearchBorrower,
+                           fromDate = Model.FromDate?.ToString("yyyy-MM-dd"),
+                           toDate = Model.ToDate?.ToString("yyyy-MM-dd"),
+                           status = Model.Status,
+                           sortOrder = ViewBag.CurrentSort
+                       })">
+                        &laquo; Trước
+                    </a>
+                </li>
+
+                <!-- Hiển thị các số trang -->
+                @for (int i = 1; i <= Model.Tickets.TotalPages; i++)
+                {
+                    <li class="page-item @(i == Model.Tickets.PageNumber ? "active" : "")">
+                        <a class="page-link @(i == Model.Tickets.PageNumber ? "bg-success border-success text-white" : "text-dark")" href="@Url.Action("Index", new
+                           {
+                               page = i,
+                               ticketId = Model.SearchTicketId,
+                               borrower = Model.SearchBorrower,
+                               fromDate = Model.FromDate?.ToString("yyyy-MM-dd"),
+                               toDate = Model.ToDate?.ToString("yyyy-MM-dd"),
+                               status = Model.Status,
+                               sortOrder = ViewBag.CurrentSort
+                           })">@i</a>
+                    </li>
+                }
+
+                <!-- Nút Sau (Next) -->
+                <li class="page-item @(Model.Tickets.PageNumber >= Model.Tickets.TotalPages ? "disabled" : "")">
+                    <a class="page-link text-success fw-bold" href="@Url.Action("Index", new
+                       {
+                           page = Model.Tickets.PageNumber + 1,
+                           ticketId = Model.SearchTicketId,
+                           borrower = Model.SearchBorrower,
+                           fromDate = Model.FromDate?.ToString("yyyy-MM-dd"),
+                           toDate = Model.ToDate?.ToString("yyyy-MM-dd"),
+                           status = Model.Status,
+                           sortOrder = ViewBag.CurrentSort
+                       })">
+                        Sau &raquo;
+                    </a>
+                </li>
+
+            </ul>
+        </div>
+    }
+</div>
+
+<!-- ================= MODAL THÔNG TIN PHIẾU ================= -->
+<div class="modal fade" id="ticketModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background-color: #f4f4f4;">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                <h5 class="text-center mb-4">Thông tin phiếu</h5>
+
+                <form id="updateTicketForm">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" id="modalTicketId" name="TicketId" />
+
+                    <div class="row mb-2"><label class="col-5 text-end mb-0">Người mượn :</label><div class="col-7 fw-bold" id="modalBorrower"></div></div>
+                    <div class="row mb-2"><label class="col-5 text-end mb-0">Ngày mượn :</label><div class="col-7 fw-bold" id="modalBorrowDate"></div></div>
+                    <div class="row mb-2"><label class="col-5 text-end mb-0">Ngày hết hạn :</label><div class="col-7 fw-bold" id="modalDueDate"></div></div>
+                    <div class="row mb-2"><label class="col-5 text-end mb-0">Ngày trả :</label><div class="col-7 fw-bold" id="modalReturnDate"></div></div>
+
+                    <div class="row mb-2 mt-4">
+                        <label class="col-12 mb-2">Tên sách :</label>
+                        <div class="col-12 ps-5 fw-bold" id="modalBookList"></div>
+                    </div>
+
+                    <!-- TÌNH TRẠNG PHIẾU: CHỈ CHO PHÉP ADMIN HOẶC THỦ THƯ SỬA, KHÁCH CHỈ XEM -->
+                    <div class="row mb-2 mt-4 align-items-center">
+                        <label class="col-5 mb-0">Tình trạng phiếu :</label>
+                        <div class="col-7">
+                            @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
+                            {
+                                <select id="modalStatus" name="NewStatus" class="form-select form-select-sm border-0 rounded-0" asp-items="Html.GetEnumSelectList<BorrowStatus>()"></select>
+                            }
+                            else
+                            {
+                                <!-- Khách xem dạng text bình thường không sửa được -->
+                                <input type="text" id="modalStatusText" class="form-control form-control-sm border-0 bg-transparent fw-bold" readonly />
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <label class="col-12 mb-2">Chú thích :</label>
+                        <div class="col-12">
+                            <textarea id="modalNote" name="Note" class="form-control border-0 rounded-0" rows="3" style="background-color: #eaeaea;" @(User.IsInRole("Reader") ? "readonly" : "")></textarea>
+                        </div>
+                    </div>
+
+                    <!-- NÚT BẤM PHÂN QUYỀN TRONG MODAL -->
+                    <div class="d-flex justify-content-center gap-3 mt-4">
+                        @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
+                        {
+                            <button type="button" class="btn btn-success px-3 rounded-0 border-0" id="btnCheckTicket">Kiểm tra phiếu</button>
+                            <button type="submit" class="btn btn-success px-3 rounded-0 border-0" id="btnUpdateTicket">Cập nhật tình trạng</button>
+                        }
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<partial name="_InfoBookModalPartial" />
+@if (User.IsInRole("Librarian"))
+{
+    <partial name="_UpdateStatusModalPartial" />
+}
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // ==========================================
+            // 1. CLICK CARD -> MỞ MODAL THÔNG TIN PHIẾU
+            // ==========================================
+            $('.ticket-item').click(function() {
+                var ticketId = $(this).data('id');
+
+                $.get('/BorrowTickets/GetTicketDetails', { id: ticketId }, function(data) {
+                    $('#modalTicketId').val(data.id);
+                    $('#modalBorrower').text(data.borrowerName);
+                    $('#modalBorrowDate').text(data.borrowDate);
+                    $('#modalDueDate').text(data.dueDate);
+                    $('#modalReturnDate').text(data.returnDate);
+                    $('#modalStatus').val(data.status);
+                    $('#modalStatusText').val(data.statusName || data.status);
+                    $('#modalNote').val(data.note);
+
+                    // TẠO LINK SÁCH ĐỂ MỞ MODAL THÔNG TIN SÁCH
+                    var bookHtml = '';
+                    if (data.books && data.books.length > 0) {
+                        $.each(data.books, function(i, book) {
+                            bookHtml += '<div class="mb-2">- ' +
+                                '<a href="javascript:void(0)" class="text-primary text-decoration-none view-book-detail" data-book-id="' + book.bookId + '">' +
+                                book.name +
+                                '</a>' +
+                                '</div>';
+                        });
+                    } else {
+                        bookHtml = '<div class="text-muted fst-italic">Không có sách nào</div>';
+                    }
+                    $('#modalBookList').html(bookHtml);
+
+                    $('#ticketModal').modal('show');
+                });
+            });
+
+            // ==========================================
+            // 2. BẮT SỰ KIỆN CLICK VÀO TÊN SÁCH (CHUYỂN MODAL)
+            // ==========================================
+            $(document).on('click', '.view-book-detail', function(e) {
+                e.preventDefault();
+                var bookId = $(this).data('book-id');
+
+                // Gọi API lấy chi tiết sách từ HomeController
+                $.get('/Home/GetBookDetails', { id: bookId }, function(res) {
+
+                    // Đổ dữ liệu vào InfoBookModal
+                    $('#infoBookId').val(res.id);
+                    $('#infoCategory').text(res.categoryName || res.category || "Chưa phân loại");
+                    $('#infoShelf').text(res.shelfName || "");
+                    $('#infoTier').text(res.tierName || "");
+                    $('#infoISBN').text(res.isbn);
+                    $('#infoTitle').text(res.title);
+                    $('#infoAuthor').text(res.author);
+                    $('#infoYear').text(res.publishYear || "Không rõ");
+                    $('#infoPublisher').text(res.publisher || "Không rõ");
+
+                    // LƯU Ý: Lưu text hiển thị và lưu ngầm mã status (1,2,3,4) để Thủ thư dùng khi cập nhật
+                    $('#infoStatus').text(res.statusName);
+                    $('#infoStatus').data('status-id', res.status);
+
+                    if (res.coverImage) {
+                        $('#infoImage').attr('src', res.coverImage);
+                    } else {
+                        $('#infoImage').attr('src', '/images/default-book.png');
+                    }
+
+                    // --- CÁCH SỬA LỖI BOOTSTRAP: ĐÓNG MODAL CŨ TRƯỚC, ĐỢI 1 CHÚT MỚI MỞ MODAL SÁCH ---
+                    $('#ticketModal').modal('hide');
+
+                    setTimeout(function() {
+                        $('#infoBookModal').modal('show');
+                    }, 400); // Đợi 0.4 giây (400ms)
+
+                }).fail(function() {
+                    alert("Không thể tải thông tin sách.");
+                });
+            });
+
+            // ==========================================
+            // 3. SUBMIT FORM CẬP NHẬT TRẠNG THÁI PHIẾU (Admin/Thủ thư)
+            // ==========================================
+            $('#updateTicketForm').submit(function(e) {
+                e.preventDefault();
+                var formData = $(this).serialize();
+                $('#btnUpdateTicket').prop('disabled', true).text('Đang lưu...');
+
+                $.post('/BorrowTickets/UpdateStatus', formData, function(res) {
+                    if (res.success) {
+                        alert("Cập nhật tình trạng phiếu thành công!");
+                        location.reload();
+                    } else {
+                        alert("Lỗi: " + res.message);
+                        $('#btnUpdateTicket').prop('disabled', false).text('Cập nhật tình trạng');
+                    }
+                }).fail(function() {
+                    alert("Có lỗi xảy ra trong quá trình cập nhật.");
+                    $('#btnUpdateTicket').prop('disabled', false).text('Cập nhật tình trạng');
+                });
+            });
+
+            // ==========================================
+            // 4. NÚT KIỂM TRA PHIẾU
+            // ==========================================
+            $('#btnCheckTicket').click(function() {
+                var ticketId = $('#modalTicketId').val();
+                alert('Tính năng kiểm tra chi tiết hệ thống cho phiếu ' + ticketId + ' đang được phát triển.');
+            });
+        });
+
+        // ==========================================
+        // 5. CÁC HÀM HỖ TRỢ THỦ THƯ TƯƠNG TÁC TỪ INFO BOOK MODAL
+        // ==========================================
+        function openUpdateStatusModal() {
+            var bookId = $('#infoBookId').val();
+            var statusId = $('#infoStatus').data('status-id'); // Lấy mã số đã lưu ngầm ở trên
+
+            $('#updateStatusBookId').val(bookId);
+            $('#bookStatusSelect').val(statusId);
+
+            var updateModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
+            updateModal.show();
+        }
+
+        function saveBookStatus() {
+            var bookId = $('#updateStatusBookId').val();
+            var newStatus = $('#bookStatusSelect').val();
+
+            if (!newStatus || newStatus.trim() === "") {
+                alert("Vui lòng chọn tình trạng sách trước khi lưu!");
+                return;
+            }
+
+            $.post('/Home/UpdateStatus', { id: bookId, status: newStatus }, function(response) {
+                if (response.success) {
+                    alert("Cập nhật tình trạng thành công!");
+                    // Cập nhật lại UI trong modal Info
+                    $('#infoStatus').text($("#bookStatusSelect option:selected").text());
+                    $('#infoStatus').data('status-id', newStatus);
+
+                    // Đóng form update
+                    var updateModal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
+                    updateModal.hide();
+                } else {
+                    alert(response.message);
+                }
+            });
+        }
+    </script>
+}
+}
+}

@@ -1,0 +1,66 @@
+﻿
+
+/*style cho nút lên top*/
+#btnBackToTop {
+    position: fixed; /* Cố định trên màn hình */
+    bottom: 30px; /* Cách đáy 30px */
+    right: 30px; /* Cách lề phải 30px */
+    display: none; /* Ẩn mặc định, chỉ hiện khi cuộn */
+    z-index: 999; /* Luôn nằm trên cùng */
+    border: none;
+    outline: none;
+    background-color: #198754; /* Màu xanh lá (success) */
+    color: white;
+    cursor: pointer;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%; /* Bo tròn thành hình nón */
+    font-size: 20px;
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.3); /* Tạo bóng */
+    transition: background-color 0.3s; /* Hiệu ứng đổi màu  */
+}
+
+    #btnBackToTop:hover {
+        background-color: #157347; /* Đậm hơn khi đưa chuột vào */
+    }
+/*kết thúc style cho nút lên top*/
+
+/* sidebar thu gọn khi màn hình nhỏ hơn 768px */
+@media (max-width: 767.98px) {
+    /* Ép Sidebar thành dạng trượt tàng hình bên trái */
+    #sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px; /* Giấu toàn bộ 280px của sidebar sang bên trái */
+        width: 280px !important;
+        height: 100vh;
+        z-index: 1050; /* Phải lớn hơn z-index của Header (1030) để đè lên trên */
+        background-color: #f8f9fa; /* Màu nền của menu */
+        overflow-y: auto;
+        transition: left 0.3s ease-in-out; /* Hiệu ứng trượt */
+        box-shadow: 4px 0 10px rgba(0,0,0,0.2);
+    }
+        /* Class kích hoạt: Kéo sidebar trở lại màn hình */
+        #sidebar.active {
+            left: 0;
+        }
+    /* CSS cho màng chắn tối màu */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1040; /* Nằm dưới Sidebar (1050) nhưng trên Header (1030) */
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease-in-out;
+    }
+        /* Class kích hoạt màng chắn */
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+}
+/*kết thúc style cho sidebar thu gọn khi màn hình nhỏ hơn 768px*/

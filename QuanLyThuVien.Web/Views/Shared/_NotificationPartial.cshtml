@@ -1,0 +1,16 @@
+﻿@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        <i class="fa-solid fa-check-circle me-2"></i><strong>Thành công!</strong> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+        <i class="fa-solid fa-exclamation-circle me-2"></i><strong>Lỗi!</strong> @TempData["ErrorMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@* Cách dùng ở Controller: Mỗi khi lưu dữ liệu xong, bạn chỉ cần gán TempData["SuccessMessage"] = "Đã lưu thành công!";, sau đó redirect sang trang khác, giao diện sẽ tự động hiện thông báo xanh (hoặc đỏ). *@

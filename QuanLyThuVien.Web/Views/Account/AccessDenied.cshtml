@@ -1,0 +1,26 @@
+﻿@{
+    ViewData["Title"] = "Từ chối truy cập";
+    Layout = "~/Views/Shared/_AccessDeniedLayout.cshtml"; // Hoặc layout dành riêng cho trang lỗi
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <h1 class="display-1 fw-bold text-danger">403</h1>
+            <h2 class="mb-4">Từ Chối Truy Cập</h2>
+            <p class="lead text-muted mb-4">
+                Xin lỗi, bạn không có quyền xem hoặc thực hiện thao tác trên trang này.
+                Vui lòng liên hệ với Quản trị viên nếu bạn cho rằng đây là sự nhầm lẫn.
+            </p>
+
+            <a asp-controller="Home" asp-action="Index" class="btn btn-primary px-4 py-2">
+                <i class="fa-solid fa-house me-2"></i> Quay về Trang chủ
+            </a>
+
+            <!-- Nút quay lại trang trước đó bằng JS -->
+            <button onclick="history.back()" class="btn btn-outline-secondary px-4 py-2 ms-2">
+                <i class="fa-solid fa-arrow-left me-2"></i> Quay lại
+            </button>
+        </div>
+    </div>
+</div>

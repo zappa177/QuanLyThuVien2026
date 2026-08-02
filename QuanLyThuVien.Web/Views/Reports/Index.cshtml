@@ -1,0 +1,102 @@
+﻿@{
+    var currentReportType = ViewBag.ReportType as string;
+}
+
+<div class="container-fluid py-4" style="background-color: #f4f6f9; min-height: 85vh;">
+
+    <!-- Dòng chọn loại thống kê -->
+    <div class="d-flex align-items-center mb-4 ps-2">
+        <label class="fs-5 me-3 text-dark mb-0">Thống kê theo</label>
+        <form method="get" asp-action="Index" id="reportForm" class="mb-0">
+            <!-- onchange="this.form.submit()" giúp tự động tải lại bảng khi người dùng chọn dòng khác -->
+            <select name="reportType" class="form-select form-select-lg rounded-0 border-0 shadow-sm" style="width: 350px;" onchange="this.form.submit()">
+                <option value="category" selected="@(currentReportType == "category")">Thể loại</option>
+                <option value="status" selected="@(currentReportType == "status")">Tình trạng sách</option>
+                <option value="top10" selected="@(currentReportType == "top10")">10 sách được mượn nhiều nhất</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- Bảng dữ liệu linh hoạt theo lựa chọn -->
+    <div class="bg-white mx-2 mb-5">
+        <table class="table table-bordered align-middle text-center mb-0" style="border-color: #dee2e6;">
+
+            @if (currentReportType == "category" && ViewBag.CategoryData != null)
+            {
+                var data = ViewBag.CategoryData as List<QuanLyThuVien.Web.Models.CategoryReportViewModel>;
+                <thead style="background-color: #fdfdfd;">
+                    <tr>
+                        <th class="py-3 w-50 border-end">Tên thể loại</th>
+                        <th class="py-3 w-50">Số lượng sách</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in data!)
+                    {
+                        <tr>
+                            <td class="py-3 border-end">@item.CategoryName</td>
+                            <td class="py-3">@item.BookCount</td>
+                        </tr>
+                    }
+                </tbody>
+            }
+            else if (currentReportType == "status" && ViewBag.StatusData != null)
+            {
+                var data = ViewBag.StatusData as List<QuanLyThuVien.Web.Models.StatusReportViewModel>;
+                <thead style="background-color: #fdfdfd;">
+                    <tr>
+                        <th class="py-3 w-50 border-end">Tình trạng</th>
+                        <th class="py-3 w-50">Số lượng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in data!)
+                    {
+                        <tr>
+                            <td class="py-3 border-end">@item.StatusName</td>
+                            <td class="py-3">@item.BookCount</td>
+                        </tr>
+                    }
+                </tbody>
+            }
+            else if (currentReportType == "top10" && ViewBag.TopBookData != null)
+            {
+                var data = ViewBag.TopBookData as List<QuanLyThuVien.Web.Models.TopBookReportViewModel>;
+                <thead style="background-color: #fdfdfd;">
+                    <tr>
+                        <th class="py-3 w-75 border-end">Tên sách</th>
+                        <th class="py-3 w-25">Lượt mượn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in data!)
+                    {
+                        <tr>
+                            <td class="py-3 border-end text-start ps-4">@item.BookTitle</td>
+                            <td class="py-3">@item.BorrowCount</td>
+                        </tr>
+                    }
+                </tbody>
+            }
+        </table>
+    </div>
+
+    <!-- Khu vực nút xuất báo cáo -->
+    <div class="d-flex justify-content-center gap-4 mb-5">
+        <a asp-action="ExportExcel" asp-route-reportType="@currentReportType" class="btn rounded-0 text-white px-4 py-2 fs-5 shadow-sm" style="background-color: #0d6efd;">
+            Xuất báo cáo excel
+        </a>
+        <a asp-action="ExportPdf" asp-route-reportType="@currentReportType" class="btn rounded-0 text-white px-4 py-2 fs-5 shadow-sm" style="background-color: #0d6efd;">
+            Xuất báo cáo pdf
+        </a>
+    </div>
+
+    <!-- Phân trang -->
+    <div class="text-center mt-5 text-dark fs-5">
+        <span style="cursor:pointer;" class="me-3">&lt;&lt;</span>
+        <span style="cursor:pointer;" class="me-3">&lt;</span>
+        <span class="me-3">1</span>
+        <span style="cursor:pointer;" class="me-3">&gt;</span>
+        <span style="cursor:pointer;">&gt;&gt;</span>
+    </div>
+</div>

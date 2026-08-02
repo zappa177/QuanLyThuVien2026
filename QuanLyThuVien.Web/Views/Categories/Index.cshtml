@@ -1,0 +1,141 @@
+﻿@model IEnumerable<QuanLyThuVien.Web.Models.CategoryViewModel>
+
+@{
+    ViewData["Title"] = "Quản lý thể loại";
+}
+
+<div class="container-fluid mt-3">
+    <!-- Tab menu phía trên -->
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-controller="Shelves" asp-action="Index">Tầng kệ sách</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active fw-bold" asp-controller="Categories" asp-action="Index">Thể loại</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-controller="Users" asp-action="Index">Người dùng</a>
+        </li>
+    </ul>
+
+    <!-- Nút Mở Modal Thêm Thể Loại -->
+    <div class="mb-3">
+        <button type="button" class="btn btn-success text-white px-4 rounded-0" onclick="openAddModal()">
+            Thêm thể loại
+        </button>
+    </div>
+
+    <!-- Form Tìm kiếm -->
+    <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
+        <div class="col-auto">
+            <label class="fw-bold">Tên thể loại :</label>
+        </div>
+        <div class="col-md-3">
+            <input type="text" name="searchName" value="@ViewBag.SearchName" class="form-control rounded-0 border bg-light" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0">Tìm kiếm</button>
+        </div>
+    </form>
+
+    <!-- Bảng danh sách thể loại -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered mb-0 align-middle">
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold ps-4">@item.Name</td>
+                            <td style="width: 12%; text-align: center;">
+                                <a href="javascript:void(0);" class="text-primary text-decoration-none" 
+                                   onclick="openEditModal(@item.Id, '@item.Name')">
+                                   Chỉnh sửa
+                                </a>
+                            </td>
+                            <td style="width: 12%; text-align: center;">
+                                <a href="javascript:void(0);" class="text-decoration-none @(item.IsActive ? "text-danger" : "text-success")" 
+                                   onclick="toggleStatus(@item.Id)">
+                                   @(item.IsActive ? "Ẩn" : "Hiện")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Thêm / Sửa Thể Loại -->
+<div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 p-3">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalTitle">Thêm thể loại</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="categoryForm">
+                <input type="hidden" id="CategoryId" name="id" value="0" />
+                <div class="modal-body">
+                    <div class="mb-3 row align-items-center">
+                        <label class="col-sm-4 col-form-label text-end fw-bold">Tên thể loại :</label>
+                        <div class="col-sm-8">
+                            <input type="text" id="CategoryName" name="name" class="form-control rounded-0 bg-light" required />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="submit" class="btn btn-success text-white px-5 rounded-0">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Mở modal thêm mới
+        function openAddModal() {
+            $('#CategoryId').val(0);
+            $('#CategoryName').val('');
+            $('#modalTitle').text('Thêm thể loại');
+            var myModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            myModal.show();
+        }
+
+        // Mở modal chỉnh sửa
+        function openEditModal(id, name) {
+            $('#CategoryId').val(id);
+            $('#CategoryName').val(name);
+            $('#modalTitle').text('Chỉnh sửa thể loại');
+            var myModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+            myModal.show();
+        }
+
+        // Xử lý submit form qua Ajax
+        $('#categoryForm').submit(function (e) {
+            e.preventDefault();
+            var formData = $(this).serialize();
+
+            $.post('/Categories/SaveCategory', formData, function (response) {
+                if (response.success) {
+                    location.reload(); // Tải lại trang để cập nhật danh sách
+                } else {
+                    alert(response.message);
+                }
+            });
+        });
+
+        // Xử lý ẩn/hiện thể loại qua Ajax
+        function toggleStatus(id) {
+            $.post('/Categories/ToggleCategoryStatus', { id: id }, function (response) {
+                if (response.success) {
+                    location.reload();
+                } else {
+                    alert(response.message);
+                }
+            });
+        }
+    </script>
+}

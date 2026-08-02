@@ -1,0 +1,87 @@
+﻿<!-- layout chính cho web -->
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Hệ thống Quản lý Thư viện</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome cho các icon -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- File CSS -->
+    <link href="~/css/site.css" rel="stylesheet" asp-append-version="true" />
+</head>
+<body class="bg-light">
+
+    <!-- header -->
+    @await Component.InvokeAsync("Header") 
+
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Sidebar -->
+            <div id="sidebar" class="col-auto col-md-3 col-xl-2 px-sm-2 px-0 bg-white border-end min-vh-100">
+                <!-- gọi Sidebar Partial -->
+                <partial name="_SidebarPartial" />
+            </div>
+
+            <!-- main-->
+            <div class="col py-3">
+                <main class="container-fluid">
+                    <!-- Nơi hiển thị thông báo chung (Success/Error) -->
+                    <partial name="_NotificationPartial" />
+
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    </div>
+    <!-- Dòng sinh Token ẩn cho AJAX gọi -->
+    @Html.AntiForgeryToken()
+
+    <!-- MODAL giỏ hàng -->
+    <div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold">Giỏ hàng sách</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-danger text-center mb-3" style="font-size: 0.9rem;">Tối đa được phép mượn 2 cuốn sách khác nhau</p>
+
+                    <!-- Nơi chứa sách -->
+                    <div id="cartModalContent"></div>
+
+                    <!-- Khu vực dành riêng cho Thủ thư/Admin nhập tên người mượn -->
+                    <div id="librarianInputArea" class="mt-4 p-3 bg-light border rounded" style="display: none;">
+                        <label class="form-label fw-bold">Tên đăng nhập (Username) của người mượn:</label>
+                        <input type="text" id="targetUsername" class="form-control" placeholder="Nhập username (để trống nếu tự mượn)">
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button type="button" id="btnCreateTicket" class="btn btn-success px-4 fw-bold" onclick="createTicketFromCart()">
+                            Tạo phiếu mượn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NÚT LÊN ĐẦU TRANG -->
+    <button id="btnBackToTop" title="Lên đầu trang">
+        <i class="fa-solid fa-arrow-up"></i>
+    </button>
+
+    
+    <!-- Bootstrap 5 JS , jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Nơi render thêm script riêng cho từng view  -->
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

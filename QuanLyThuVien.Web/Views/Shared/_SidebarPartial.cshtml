@@ -1,0 +1,79 @@
+﻿<!-- phần hiển thị sidebar (Menu bên trái) -->
+<div class="d-flex flex-column align-items-center align-items-sm-start w-100 h-100 bg-white">
+
+    <ul class="nav nav-pills flex-column mb-0 w-100" id="menu">
+        @{
+            // Lấy tên controller hiện tại
+            var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+
+            // Kiểm tra xem có đang ở trang Quản lý hệ thống của Admin không
+            var isManagementActive = currentController == "Shelves" || currentController == "Categories" || currentController == "Users";
+
+            // Kiểm tra xem có đang ở trang Quản lý thông tin cá nhân không (Profile)
+            var isProfileActive = currentController == "Profile";
+        }
+
+        <!-- 1. Menu dùng chung: Tìm kiếm Sách -->
+        <li class="nav-item w-100 border-bottom">
+            <a asp-controller="Home" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Home" ? "bg-primary text-white" : "text-dark")">
+                <span class="">Tìm kiếm sách</span>
+            </a>
+        </li>
+
+        <!-- 2. Menu dùng chung: Danh sách phiếu mượn -->
+        <li class="nav-item w-100 border-bottom">
+            <a asp-controller="BorrowTickets" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "BorrowTickets" ? "bg-primary text-white" : "text-dark")">
+                <span class="">Danh sách phiếu mượn</span>
+            </a>
+        </li>
+
+        <!-- 3. Menu: Quản lý thông tin (Phân quyền theo Role) -->
+        <li class="nav-item w-100 border-bottom">
+            @if (User.IsInRole("Admin"))
+            {
+                <!-- Nếu là Admin: Trỏ về trang quản lý hệ thống (Kệ sách, Thể loại, Người dùng) -->
+                <a asp-controller="Shelves" asp-action="Index"
+                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(isManagementActive ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Quản lý thông tin</span>
+                </a>
+            }
+            else
+            {
+                <!-- Nếu là Thủ thư hoặc Khách: Trỏ về trang chỉnh sửa thông tin cá nhân của chính họ -->
+                <a asp-controller="Profile" asp-action="Edit"
+                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(isProfileActive ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Quản lý thông tin</span>
+                </a>
+            }
+        </li>
+
+        <!-- 4. Menu: Báo cáo thống kê cho admin -->
+        @if (User.IsInRole("Admin"))
+        {
+            <li class="nav-item w-100 border-bottom">
+                <a asp-controller="Reports" asp-action="Index"
+                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Reports" ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Báo cáo thống kê</span>
+                </a>
+            </li>
+        }
+
+        <!-- 5. Menu: Đổi mật khẩu -->
+        <li class="nav-item w-100 border-bottom">
+            <a asp-controller="Account" asp-action="ChangePassword"
+               class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "ChangePassword" ? "bg-primary text-white" : "text-dark")">
+                <span class="">Đổi mật khẩu</span>
+            </a>
+        </li>
+
+    </ul>
+
+    <!-- Đăng xuất -->
+    <div class="w-100 px-3 mt-4 text-center">
+        <form asp-controller="Account" asp-action="Logout" method="post" class="w-100">
+            <button type="submit" class="btn btn-success fs-5 px-4 w-75">
+                Đăng xuất
+            </button>
+        </form>
+    </div>
+</div>

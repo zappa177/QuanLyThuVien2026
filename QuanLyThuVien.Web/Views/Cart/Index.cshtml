@@ -1,0 +1,136 @@
+﻿@model IEnumerable<QuanLyThuVien.Domain.Entities.CartItems>
+
+@{
+    ViewData["Title"] = "Giỏ hàng";
+}
+
+<div class="container py-5" style="max-width: 800px;">
+    @Html.AntiForgeryToken()
+
+    <!-- Tiêu đề và chú thích -->
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">Giỏ hàng</h2>
+        <p class="text-danger m-0" style="font-size: 0.95rem;">Tối đa được phép mượn 2 cuốn sách</p>
+    </div>
+
+    <!-- Danh sách sản phẩm trong giỏ -->
+    <div id="cartItemsContainer">
+        @if (Model != null && Model.Any())
+        {
+            @foreach (var item in Model)
+            {
+                <div class="card border-0 shadow-sm mb-3 align-items-center flex-row p-3 cart-row" id="cart-item-@item.Id" style="background-color: #ffffff;">
+                    <!-- Ảnh bìa sách -->
+                    <div class="text-center me-4" style="width: 100px; height: 120px; background-image: url('/images/transparent-grid.png'); background-size: cover;">
+                        <img src="@(string.IsNullOrEmpty(item.Book?.CoverImage) ? "/images/no-cover.png" : item.Book.CoverImage)"
+                             alt="@item.Book?.Title" class="img-fluid h-100" style="object-fit: contain;" />
+                    </div>
+
+                    <!-- Tên sách -->
+                    <div class="flex-grow-1">
+                        <h5 class="fw-bold mb-0">@(item.Book?.Title ?? "Tên sách")</h5>
+                    </div>
+
+                    <!-- Nút Xóa -->
+                    <div>
+                        <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-0 fw-bold cart-row"
+                                onclick="removeItem(@item.Id)">
+                            Xóa
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <!-- Nút Tạo phiếu mượn -->
+            <div class="text-center mt-5">
+                <button type="button" id="btnCreateTicket" class="btn btn-success px-5 py-3 rounded-0 border-0 fw-bold fs-5 text-white" style="background-color: #28a745;" onclick="createBorrowTicket()">
+                    Tạo phiếu mượn
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5">
+                <h5 class="text-muted">Giỏ hàng của bạn đang trống.</h5>
+                <a href="/Home/Index" class="btn btn-warning mt-3 rounded-0 px-4 fw-bold">Quay lại tìm kiếm sách</a>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // 1. Hàm xóa sản phẩm khỏi giỏ hàng
+        function removeItem(cartId) {
+            if (confirm("Bạn có chắc chắn muốn xóa cuốn sách này khỏi giỏ hàng?")) {
+                
+                // LẤY CHÌA KHÓA BẢO MẬT
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '/Cart/RemoveItem',
+                    type: 'POST',
+                    data: { id: cartId },
+                    // NHÉT CHÌA KHÓA VÀO HEADER
+                    headers: {
+                        "RequestVerificationToken": token
+                    },
+                    success: function (res) {
+                        if (res.success) {
+                            $('#cart-item-' + cartId).fadeOut(300, function() { 
+                                $(this).remove(); 
+                                if ($('.cart-row').length === 0) {
+                                    location.reload();
+                                }
+                            });
+                            
+                            $.get('/Home/GetCartItemCount', function (count) {
+                                let badge = $('#cartItemCountBadge');
+                                if (badge.length > 0) {
+                                    badge.text(count);
+                                    badge.css('display', count > 0 ? 'inline-block' : 'none');
+                                }
+                            });
+                        } else {
+                            alert("Lỗi: " + res.message);
+                        }
+                    },
+                    error: function (xhr) {
+                        alert("Không thể kết nối đến máy chủ. Mã lỗi: " + xhr.status);
+                    }
+                });
+            }
+        }
+
+        // 2. Hàm tạo phiếu mượn
+        function createBorrowTicket() {
+            $('#btnCreateTicket').prop('disabled', true).text('Đang xử lý...');
+            
+            // LẤY CHÌA KHÓA BẢO MẬT
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $.ajax({
+                url: '/Cart/CreateBorrowTicket',
+                type: 'POST',
+                // NHÉT CHÌA KHÓA VÀO HEADER
+                headers: {
+                    "RequestVerificationToken": token
+                },
+                success: function (res) {
+                    if (res.success) {
+                        alert(res.message);
+                        window.location.href = '/BorrowTickets/Index'; 
+                    } else {
+                        alert(res.message);
+                        $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
+                    }
+                },
+                error: function (xhr) {
+                    alert("Có lỗi xảy ra khi tạo phiếu mượn.");
+                    $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
+                }
+            });
+        }
+    </script>
+}
+}

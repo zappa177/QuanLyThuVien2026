@@ -1,0 +1,49 @@
+﻿@model QuanLyThuVien.Web.Models.HeaderViewModel
+
+<!--  mở sidebar trên mobile thì hiện 1 nền mờ tối màu -->
+<div id="sidebarOverlay" class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- header luôn hiện thì trên đầu khi cuộn-->
+<header class="bg-primary text-white py-3 border-bottom border-dark border-3 sticky-top" style="z-index: 1030;">
+    <div class="container-fluid d-flex justify-content-between align-items-center px-4">
+
+        <!-- nút menu (mobile) + brand -->
+        <div class="d-flex align-items-center gap-3">
+            <!-- Nút menu chỉ hiện ở màn hình nhỏ (d-md-none) -->
+            <button class="btn d-md-none p-0 border-0" onclick="toggleSidebar()" style="font-size: 2rem; background: transparent;">
+                <i class="fa-solid fa-bars text-white"></i>
+            </button>
+
+            <!-- Tên Brand (Thư viện) -->
+            <h1 class="m-0 fw-normal" style="font-size: 2.5rem; letter-spacing: 1px;">
+                <a asp-controller="Home" asp-action="Index" class="text-white text-decoration-none">
+                    Thư viện
+                </a>
+            </h1>
+        </div>
+
+        <!-- bên phải giỏ hàng , lời chào -->
+        <div class="d-flex align-items-center gap-4">
+
+            <!-- chỉ hiển thị giỏ hàng nếu là khách || thủ thư -->
+            @if (Model.IsReader || Model.IsLibrarian)
+            {
+                <a href="javascript:void(0)" onclick="openCartModal()" class="text-white text-decoration-none position-relative" title="Xem giỏ mượn sách">
+                    <i class="fa-solid fa-cart-shopping" style="font-size: 1.8rem;"></i>
+
+                    <!--  số lượng item trong cart -->
+                    <span id="cartItemCountBadge"
+                          class="position-absolute top-0 start-100 translate-middle badge rounded-circle bg-danger p-2 border border-light"
+                          style="font-size: 0.8rem; display: @(Model.CartItemCount > 0 ? "inline-block" : "none");">
+                        @Model.CartItemCount
+                    </span>
+                </a>
+            }
+
+            <!-- Lời chào tùy theo Role -->
+            <!-- d-none d-sm-inline để ẩn lời chào trên màn hình điện thoại siêu nhỏ tránh rớt dòng -->
+            <span class="fs-4 d-none d-sm-inline">Xin chào, @Model.DisplayRole</span>
+
+        </div>
+    </div>
+</header>

@@ -1,0 +1,56 @@
+﻿<!-- modal thông tin sách -->
+<div class="modal fade" id="infoBookModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0" style="background-color: #f4f4f4;">
+            <div class="modal-body p-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                <h5 class="text-center mb-4">Thông tin sách</h5>
+
+                <!-- lưu id của sách ẩn để thao tác lưu -->
+                <input type="hidden" id="infoBookId" value="" />
+
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Thể loại :</label><div class="col-8 fw-bold" id="infoCategory"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Vị trí :</label><div class="col-8 fw-bold"><span id="infoShelf"></span> <span id="infoTier"></span></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Mã sách :</label><div class="col-8 fw-bold" id="infoISBN"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Tên sách :</label><div class="col-8 fw-bold" id="infoTitle"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Tác giả :</label><div class="col-8 fw-bold" id="infoAuthor"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Năm xuất bản :</label><div class="col-8 fw-bold" id="infoYear"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Nhà xuất bản :</label><div class="col-8 fw-bold" id="infoPublisher"></div></div>
+                <div class="row mb-2"><label class="col-4 text-end mb-0">Tình trạng :</label><div class="col-8 fw-bold" id="infoStatus"></div></div>
+
+                <div class="text-center mt-3 mb-3">
+                    <img id="infoImage" src="" style="width: 80%; height: 200px; object-fit: contain; border: 1px dashed #ccc;" />
+                </div>
+
+                <!-- các nút phân quyền theo role -->
+                <div class="text-center mt-4 mb-3">
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <div class="d-flex justify-content-center gap-3">
+                            <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-0" id="btnOpenEdit">Chỉnh sửa</button>
+                            <button type="button" class="btn btn-danger px-4 py-2 rounded-0 border-0" id="btnToggleVisibility">Ẩn sách</button>
+                        </div>
+                    }
+                    else if (User.IsInRole("Librarian"))
+                    {
+                        <div class="d-flex justify-content-center gap-3">
+                            <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-0 text-white fs-6" onclick="openUpdateStatusModal()">
+                                Cập nhật tình trạng
+                            </button>
+                            <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-0 text-white fs-6" onclick="addToCartFromModal()">
+                                Thêm giỏ hàng
+                            </button>
+                        </div>
+                    }
+                    else if (User.IsInRole("Reader"))
+                    {
+                        <button type="button" class="btn btn-success px-5 py-2 rounded-0 border-0 text-white fs-6" onclick="addToCartFromModal()">
+                            Thêm giỏ hàng
+                        </button>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
