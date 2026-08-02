@@ -20,6 +20,47 @@ try
     Log.Information("Khởi động ứng dụng ...");
     var builder = WebApplication.CreateBuilder(args);
 
+    //cấu hình sử dụng keyvault để lưu trữ các secret thay vì appsettings.json
+    //if (!builder.Environment.IsDevelopment())
+    //{
+    //    // Thay 'ten-key-vault-cua-ban' thành tên Key Vault thật của bạn trên Azure Portal
+    //    var keyVaultUri = new Uri("https://azure.net");
+
+    //    // Khởi tạo bộ kết nối bảo mật sử dụng danh tính Managed Identity của App Service
+    //    var secretClient = new Azure.Security.KeyVault.Secrets.SecretClient(keyVaultUri, new DefaultAzureCredential());
+
+    //    try
+    //    {
+    //        // 1. Lấy và nạp chuỗi kết nối SQL Azure
+    //        // Thay 'Ten-Secret-Sql-Cua-Ban' bằng tên Secret thật trong Key Vault
+    //        var sqlSecret = secretClient.GetSecret("SqlDbConnection").Value.Value;
+    //        builder.Configuration["ConnectionStrings:DefaultConnection"] = sqlSecret;
+
+    //        // 2. Lấy và nạp chuỗi kết nối Redis Cloud
+    //        // Thay 'Ten-Secret-Redis-Cua-Ban' bằng tên Secret thật trong Key Vault
+    //        var redisSecret = secretClient.GetSecret("RedisConnection").Value.Value;
+    //        builder.Configuration["ConnectionStrings:RedisCache"] = redisSecret;
+
+    //        // 3. Lấy và nạp chuỗi kết nối Application Insights
+    //        // Thay 'Ten-Secret-Insights-Cua-Ban' bằng tên Secret thật trong Key Vault
+    //        var insightsSecret = secretClient.GetSecret("ApplicationInsightConnection").Value.Value;
+    //        builder.Configuration["ApplicationInsights:ConnectionString"] = insightsSecret;
+
+    //        // 4. Lấy và nạp chuỗi kết nối Azure Blob Storage
+    //        // Thay 'Ten-Secret-Blob-Cua-Ban' bằng tên Secret thật trong Key Vault
+    //        var blobSecret = secretClient.GetSecret("BlobStorageConnection").Value.Value;
+    //        builder.Configuration["AzureStorage:ConnectionString"] = blobSecret;
+
+    //        Log.Information("Nạp toàn bộ cấu hình từ Azure Key Vault thành công.");
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        Log.Error(ex, "Lỗi xảy ra khi cố gắng kết nối hoặc bóc tách cấu hình từ Key Vault.");
+    //        throw; // Giữ throw để ứng dụng dừng lại ngay nếu thiếu cấu hình Production quan trọng
+    //    }
+    //}
+
+
     // Sử dụng Serilog thay thế bộ log mặc định của ASP.NET Core
     builder.Host.UseSerilog((context, services, configuration) => configuration
         .ReadFrom.Configuration(context.Configuration)
@@ -40,6 +81,13 @@ try
         options.Configuration = builder.Configuration.GetConnectionString("RedisCache");
         options.InstanceName = "LibraryApp_";
     });
+
+    // Kích hoạt giám sát hiệu suất tự động cho toàn bộ hệ thống Web App
+    builder.Services.AddApplicationInsightsTelemetry(options =>
+    {
+        options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+    });
+
 
     // dang ky DbContext
     builder.Services.AddDbContext<ApplicationDbContext>(option =>
