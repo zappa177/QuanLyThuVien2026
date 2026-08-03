@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - quanlythuvien
+name: Build, Test, Migrate and Deploy ASP.Net Core app to Azure Web App
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
+      
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v4
         with:
@@ -26,8 +26,20 @@ jobs:
       - name: Build with dotnet
         run: dotnet build --configuration Release
 
+      # 1. BỔ SUNG: Chạy tự động Unit Test / Integration Test
+      - name: Run automated tests
+        run: dotnet test --configuration Release --no-build --verbosity normal
+      
       - name: dotnet publish
         run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+
+      # 2. BỔ SUNG: Cài đặt công cụ EF Core
+      - name: Install dotnet-ef
+        run: dotnet tool install --global dotnet-ef
+
+      # 3. BỔ SUNG: Đóng gói Migration thành 1 file thực thi độc lập (efbundle)
+      - name: Generate EF Core Migration Bundle
+        run: dotnet ef migrations bundle --project QuanLyThuVien.Infrastructure/QuanLyThuVien.Infrastructure.csproj --startup-project QuanLyThuVien.Web/QuanLyThuVien.Web.csproj -o ${{env.DOTNET_ROOT}}/myapp/efbundle --force
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -44,22 +56,29 @@ jobs:
 
     steps:
       - name: Download artifact from build job
-        uses: actions/download-artifact@v4.1.8
+        uses: actions/download-artifact@v4
         with:
           name: .net-app
+          # BỔ SUNG: Đảm bảo tải về thư mục gốc để dễ thực thi efbundle
+          path: . 
       
       - name: Login to Azure
-        uses: azure/login@v2.1.1
+        uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_89828CE844134951BBBCFF7A2107616B }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B141F568DFBB4DAA8759C9E19C434809 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_BA0BF2D3612941F3A2367ED05AAA0260 }}
 
+      # 4. BỔ SUNG: Cấp quyền và chạy Migration áp dụng vào Database
+      - name: Run EF Core Migration
+        run: |
+          chmod +x ./efbundle
+          ./efbundle --connection "${{ secrets.AZURE_SQL_CONNECTION_STRING }}"
+
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3.0.1
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'quanlythuvien'
           slot-name: 'Production'
           package: .
-          
