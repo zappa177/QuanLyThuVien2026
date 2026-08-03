@@ -63,7 +63,7 @@ jobs:
           path: . 
       
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v2.1.1
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_89828CE844134951BBBCFF7A2107616B }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_B141F568DFBB4DAA8759C9E19C434809 }}
