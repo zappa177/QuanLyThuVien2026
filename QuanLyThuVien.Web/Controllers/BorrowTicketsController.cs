@@ -112,6 +112,16 @@ namespace QuanLyThuVien.Web.Controllers
                 ToDate = toDate,
                 Status = status
             };
+            // truyền dữ liệu thể loại và kệ cho chỉnh sửa sách trong danh sách phiếu mượn
+            if (User.IsInRole("Admin"))
+            {
+                var categories = await _context.Categories.Where(c => c.IsActive).ToListAsync();
+                var shelves = await _context.Shelves.Where(s => s.IsActive).ToListAsync();
+
+                // Lưu ý: Cần gõ đầy đủ Microsoft.AspNetCore.Mvc.Rendering.SelectList nếu trên cùng file chưa using
+                ViewBag.Categories = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(categories, "Id", "Name");
+                ViewBag.Shelves = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(shelves, "Id", "Name");
+            }
 
             return View(model);
         }
