@@ -19,31 +19,28 @@ namespace QuanLyThuVien.Web.Controllers
         {
             _context = context;
         }
-
+        //hiện thống kê theo thể loại 
         public async Task<IActionResult> Index(string reportType = "category")
         {
             ViewBag.ReportType = reportType;
 
             if (reportType == "category")
             {
-                // 1. THỐNG KÊ THEO THỂ LOẠI (Dữ liệu thực)
-                // Đếm số lượng sách (Books) nằm trong mỗi thể loại (Categories)
+                //số lượng sách theo thể loại
                 var categoryData = await _context.Categories
                     .Select(c => new CategoryReportViewModel
                     {
                         CategoryName = c.Name,
-                        BookCount = c.Books.Count // Giả định Categories có navigation property là ICollection<Books> Books
+                        BookCount = c.Books.Count   //1 thể loại có nhiều sách
                     })
-                    .OrderByDescending(c => c.BookCount) // Ưu tiên xếp thể loại nhiều sách lên trước
+                    .OrderByDescending(c => c.BookCount) // sắp xếp thể loại nhiều sách lên đầu
                     .ToListAsync();
 
                 ViewBag.CategoryData = categoryData;
             }
             else if (reportType == "status")
             {
-                // 2. THỐNG KÊ THEO TÌNH TRẠNG SÁCH (Dữ liệu thực)
-                // Nhóm các cuốn sách theo trạng thái (Status) và đếm số lượng
-                // BƯỚC 1: Kéo dữ liệu thô (Enum và Count) từ Database lên trước
+                //tình trạng sách
                 var rawStatusData = await _context.Books
                     .GroupBy(b => b.Status)
                     .Select(g => new
@@ -51,13 +48,12 @@ namespace QuanLyThuVien.Web.Controllers
                         StatusKey = g.Key,
                         BookCount = g.Count()
                     })
-                    .ToListAsync(); // Lệnh này sẽ thực thi truy vấn SQL
+                    .ToListAsync();
 
-                // BƯỚC 2: Map sang Tiếng Việt và đưa vào ViewModel ở trên bộ nhớ (RAM)
+                // map dữ liệu sang tiếng việt
                 var statusData = rawStatusData
                     .Select(x => new StatusReportViewModel
                     {
-                        // Chuyển đổi Enum sang chuỗi tiếng Việt (Lúc này switch hoạt động bình thường)
                         StatusName = x.StatusKey switch
                         {
                             BookStatus.Available => "Sẵn sàng cho mượn",
@@ -71,23 +67,20 @@ namespace QuanLyThuVien.Web.Controllers
                     .OrderByDescending(s => s.BookCount)
                     .ToList();
 
-                ViewBag.StatusData = statusData;
-
                 ViewBag.StatusData = statusData!;
             }
             else if (reportType == "top10")
             {
-                // 3. THỐNG KÊ 10 SÁCH ĐƯỢC MƯỢN NHIỀU NHẤT (Dữ liệu thực)
-                // Đếm số lượng phiếu mượn/chi tiết mượn của từng cuốn sách
+                //đếm số lượng sách trong phiếu mượn 
                 var topBooksData = await _context.Books
                     .Select(b => new TopBookReportViewModel
                     {
                         BookTitle = b.Title, // Tên cuốn sách
-                        // Đếm số lượng bản ghi trong bảng trung gian (BorrowTickets hoặc BorrowTicketDetails)
+                        // Đếm số lượng bản ghi trong bảng trung gian
                         BorrowCount = b.BorrowTicketDetails.Count
                     })
                     .OrderByDescending(b => b.BorrowCount) // Xếp từ cao xuống thấp
-                    .Take(10) // Chỉ lấy đúng 10 cuốn
+                    .Take(10) // Chỉ lấy 10 cuốn
                     .ToListAsync();
 
                 ViewBag.TopBookData = topBooksData;
@@ -96,18 +89,16 @@ namespace QuanLyThuVien.Web.Controllers
             return View();
         }
 
-        // ==========================================
-        // CÁC HÀM XUẤT FILE 
-        // ==========================================
+        //xuất file excel
         [HttpGet]
         public async Task<IActionResult> ExportExcel(string reportType = "category")
         {
-            // 1. Khởi tạo Workbook
+            // tạo Workbook
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Báo Cáo Thống Kê");
             var currentRow = 1;
 
-            // 2. Viết Header và đổ dữ liệu tùy theo loại báo cáo
+            //Header và đổ dữ liệu tùy theo loại báo cáo
             if (reportType == "category")
             {
                 worksheet.Cell(currentRow, 1).Value = "Tên thể loại";
@@ -135,7 +126,7 @@ namespace QuanLyThuVien.Web.Controllers
                     .GroupBy(b => b.Status)
                     .Select(g => new
                     {
-                        // Bỏ kiểm tra null, dùng toán tử 3 ngôi để dịch sang Tiếng Việt
+                        //chuyển status name sang tiếng việt
                         StatusName =
                             g.Key == BookStatus.Available ? "Sẵn sàng cho mượn" :
                             g.Key == BookStatus.Borrowed ? "Đang cho mượn" :
@@ -182,7 +173,7 @@ namespace QuanLyThuVien.Web.Controllers
             // Tự động căn chỉnh độ rộng cột
             worksheet.Columns().AdjustToContents();
 
-            // 3. Chuyển file ra dạng Stream và trả về
+            // Chuyển file ra dạng Stream và trả về
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);
             var content = stream.ToArray();
@@ -191,6 +182,7 @@ namespace QuanLyThuVien.Web.Controllers
             return File(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
 
+        //xuất file pdf
         [HttpGet]
         public async Task<IActionResult> ExportPdf(string reportType = "category")
         {

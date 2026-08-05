@@ -2,19 +2,19 @@
 @using QuanLyThuVien.Domain.Enums
 
 <div class="container-fluid py-4">
-    <!-- KHU VỰC TÌM KIẾM -->
+    <!-- form tìm kiếm -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body bg-light">
             <form id="searchForm" method="get" asp-action="Index">
                 <div class="row g-3 align-items-center">
 
-                    <!-- Mã phiếu: Hiển thị cho tất cả -->
+                    <!-- Mã phiếu-->
                     <div class="col-md-3">
                         <label class="form-label mb-1">Mã phiếu</label>
                         <input type="text" asp-for="SearchTicketId" class="form-control rounded-0 border-0" />
                     </div>
 
-                    <!-- TÊN NGƯỜI MƯỢN: CHỈ ADMIN VÀ THỦ THƯ MỚI CÓ -->
+                    <!-- chỉ admin và thủ thư hiện input tìm tên người mượn -->
                     @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
                     {
                         <div class="col-md-3">
@@ -48,7 +48,7 @@
         </div>
     </div>
 
-    <!-- KHU VỰC SẮP XẾP -->
+    <!-- saqps xếp -->
     <div class="d-flex align-items-center mb-3">
         <span class="me-2">Sắp xếp :</span>
         <select name="sortOrder" form="searchForm" class="form-select form-select-sm border-0 bg-info text-dark rounded-0 fw-bold w-auto" onchange="this.form.submit()">
@@ -65,7 +65,7 @@
         </select>
     </div>
 
-    <!-- KHU VỰC DANH SÁCH (LƯỚI 3x3) -->
+    <!-- hiển thị 3x3 -->
     <div class="row g-4">
         @if (Model.Tickets != null && Model.Tickets.Items.Any())
         {
@@ -76,7 +76,7 @@
                         <div class="card-body text-center p-4">
                             <h4 class="fw-bold mb-3">Phiếu số @ticket.Id</h4>
                             <div class="text-start" style="font-size: 0.9rem;">
-                                <p class="mb-1">Người mượn : @ticket.Reader?.ApplicationUser?.FullName</p>
+                                <p class="mb-1">Người mượn : @ticket.Reader?.ApplicationUser?.UserName</p>
                                 <p class="mb-1">Ngày mượn : @ticket.BorrowDate.ToString("dd/MM/yyyy")</p>
                                 <p class="mb-3">Tình trạng : <span class="fw-bold">@ticket.Status</span></p>
                                 <p class="mb-1">Chú thích :</p>
@@ -97,13 +97,13 @@
         }
     </div>
 
-    <!-- PHÂN TRANG -->
+    <!-- phân trang -->
     @if (Model.Tickets != null && Model.Tickets.TotalPages > 1)
     {
         <div class="d-flex justify-content-center mt-5">
             <ul class="pagination border-0">
 
-                <!-- Nút Trước (Previous) -->
+                <!-- Nút Trước  -->
                 <li class="page-item @(Model.Tickets.PageNumber <= 1 ? "disabled" : "")">
                     <a class="page-link text-success fw-bold" href="@Url.Action("Index", new
                        {
@@ -136,7 +136,7 @@
                     </li>
                 }
 
-                <!-- Nút Sau (Next) -->
+                <!-- Nút Sau -->
                 <li class="page-item @(Model.Tickets.PageNumber >= Model.Tickets.TotalPages ? "disabled" : "")">
                     <a class="page-link text-success fw-bold" href="@Url.Action("Index", new
                        {
@@ -157,7 +157,7 @@
     }
 </div>
 
-<!-- ================= MODAL THÔNG TIN PHIẾU ================= -->
+<!--modal thông tin chi tiết phiếu-->
 <div class="modal fade" id="ticketModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0" style="background-color: #f4f4f4;">
@@ -179,7 +179,7 @@
                         <div class="col-12 ps-5 fw-bold" id="modalBookList"></div>
                     </div>
 
-                    <!-- TÌNH TRẠNG PHIẾU: CHỈ CHO PHÉP ADMIN HOẶC THỦ THƯ SỬA, KHÁCH CHỈ XEM -->
+                    <!-- tình trạng phiếu  , chỉ admin và thủ thư được sửa -->
                     <div class="row mb-2 mt-4 align-items-center">
                         <label class="col-5 mb-0">Tình trạng phiếu :</label>
                         <div class="col-7">
@@ -202,7 +202,7 @@
                         </div>
                     </div>
 
-                    <!-- NÚT BẤM PHÂN QUYỀN TRONG MODAL -->
+                    <!-- nút hiển thị theo phân quyền-->
                     <div class="d-flex justify-content-center gap-3 mt-4">
                         @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
                         {
@@ -215,17 +215,16 @@
         </div>
     </div>
 </div>
-<partial name="_InfoBookModalPartial" />
+<partial name="_InfoBookModalPartial" /> @* modal info book *@
 @if (User.IsInRole("Librarian"))
 {
-    <partial name="_UpdateStatusModalPartial" />
+    <partial name="_UpdateStatusModalPartial" /> @* modal update status book chỉ cho librarian  *@
 }
 @section Scripts {
     <script>
+
         $(document).ready(function() {
-            // ==========================================
-            // 1. CLICK CARD -> MỞ MODAL THÔNG TIN PHIẾU
-            // ==========================================
+            //hàm mở modal thông tin phiếu
             $('.ticket-item').click(function() {
                 var ticketId = $(this).data('id');
 
@@ -239,7 +238,7 @@
                     $('#modalStatusText').val(data.statusName || data.status);
                     $('#modalNote').val(data.note);
 
-                    // TẠO LINK SÁCH ĐỂ MỞ MODAL THÔNG TIN SÁCH
+                    // tạo link sách , mở modal thong tin sách
                     var bookHtml = '';
                     if (data.books && data.books.length > 0) {
                         $.each(data.books, function(i, book) {
@@ -258,9 +257,7 @@
                 });
             });
 
-            // ==========================================
-            // 2. BẮT SỰ KIỆN CLICK VÀO TÊN SÁCH (CHUYỂN MODAL)
-            // ==========================================
+            //click vào link sách mở modal thông tin sách
             $(document).on('click', '.view-book-detail', function(e) {
                 e.preventDefault();
                 var bookId = $(this).data('book-id');
@@ -279,7 +276,7 @@
                     $('#infoYear').text(res.publishYear || "Không rõ");
                     $('#infoPublisher').text(res.publisher || "Không rõ");
 
-                    // LƯU Ý: Lưu text hiển thị và lưu ngầm mã status (1,2,3,4) để Thủ thư dùng khi cập nhật
+                    // Lưu text hiển thị và lưu ngầm mã status (1,2,3,4) để Thủ thư dùng khi cập nhật
                     $('#infoStatus').text(res.statusName);
                     $('#infoStatus').data('status-id', res.status);
 
@@ -289,21 +286,19 @@
                         $('#infoImage').attr('src', '/images/default-book.png');
                     }
 
-                    // --- CÁCH SỬA LỖI BOOTSTRAP: ĐÓNG MODAL CŨ TRƯỚC, ĐỢI 1 CHÚT MỚI MỞ MODAL SÁCH ---
+                    // đóng modal ticket
                     $('#ticketModal').modal('hide');
 
                     setTimeout(function() {
                         $('#infoBookModal').modal('show');
-                    }, 400); // Đợi 0.4 giây (400ms)
+                    }, 400); // Đợi 0.4 giây (400ms) hiện modal thông tin sách
 
                 }).fail(function() {
                     alert("Không thể tải thông tin sách.");
                 });
             });
 
-            // ==========================================
-            // 3. SUBMIT FORM CẬP NHẬT TRẠNG THÁI PHIẾU (Admin/Thủ thư)
-            // ==========================================
+            //submit status
             $('#updateTicketForm').submit(function(e) {
                 e.preventDefault();
                 var formData = $(this).serialize();
@@ -323,18 +318,43 @@
                 });
             });
 
-            // ==========================================
-            // 4. NÚT KIỂM TRA PHIẾU
-            // ==========================================
+            //kiểm tra phiếu    
             $('#btnCheckTicket').click(function() {
                 var ticketId = $('#modalTicketId').val();
-                alert('Tính năng kiểm tra chi tiết hệ thống cho phiếu ' + ticketId + ' đang được phát triển.');
+    
+                if (!confirm('Bạn có muốn hệ thống kiểm tra tình trạng khả dụng của sách trong phiếu này?')) {
+                    return;
+                }
+
+                // Đổi hiệu ứng nút để tránh click nhiều lần
+                var btn = $(this);
+                var originalText = btn.text();
+                btn.prop('disabled', true).text('Đang kiểm tra...');
+
+                // kiểm tra phiếu
+                $.post('/BorrowTickets/CheckTicket', { ticketId: ticketId }, function(res) {
+                    if (res.success) {
+                        alert(res.message);
+            
+                        if (res.isCanceled) {
+                            // Nếu phiếu bị hủy, tải lại trang để giao diện cập nhật trạng thái mới
+                            location.reload();
+                        } else {
+                            // hợp lệ 
+                            btn.prop('disabled', false).text(originalText);
+                        }
+                    } else {
+                        alert("Lỗi: " + res.message);
+                        btn.prop('disabled', false).text(originalText);
+                    }
+                }).fail(function() {
+                    alert("Có lỗi xảy ra khi kết nối tới máy chủ.");
+                    btn.prop('disabled', false).text(originalText);
+                });
             });
         });
 
-        // ==========================================
-        // 5. CÁC HÀM HỖ TRỢ THỦ THƯ TƯƠNG TÁC TỪ INFO BOOK MODAL
-        // ==========================================
+        //modal book khi mở sách thông qua phiếu mượn
         function openUpdateStatusModal() {
             var bookId = $('#infoBookId').val();
             var statusId = $('#infoStatus').data('status-id'); // Lấy mã số đã lưu ngầm ở trên
@@ -370,6 +390,7 @@
                 }
             });
         }
+        
     </script>
 }
 }

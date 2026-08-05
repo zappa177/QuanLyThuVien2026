@@ -16,9 +16,7 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. GIAO DIỆN CHÍNH: DANH SÁCH KỆ SÁCH
-        // ==========================================
+        //hiện danh sách kệ shelves/index
         public async Task<IActionResult> Index(string? searchString, string sortOrder = "name_asc", int page = 1)
         {
             var query = _context.Shelves
@@ -41,11 +39,9 @@ namespace QuanLyThuVien.Web.Controllers
             return View(await query.ToListAsync());
         }
 
-        // ==========================================
-        // CÁC API XỬ LÝ KỆ SÁCH (THÊM, SỬA, ẨN/HIỆN)
-        // ==========================================
 
-        // Thêm mới hoặc Cập nhật Kệ sách (Chỉ quản lý Tên kệ)
+
+        // Thêm mới hoặc chỉnh sửa tên kệ sách
         [HttpPost]
         public async Task<IActionResult> SaveShelf(int id, string name)
         {
@@ -83,23 +79,56 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
-        // Ẩn / Hiện Kệ sách (Set IsActive = false/true thay vì xóa)
+        // ẩn hiện kệ sách theo isactive (true/false)
         [HttpPost]
         public async Task<IActionResult> ToggleShelfStatus(int id)
         {
+            // Lấy thông tin kệ sách
             var shelf = await _context.Shelves.FindAsync(id);
-            if (shelf == null) return Json(new { success = false, message = "Không tìm thấy kệ sách." });
+            if (shelf == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy kệ sách." });
+            }
 
-            shelf.IsActive = !shelf.IsActive; // Đảo ngược trạng thái Active
-            _context.Shelves.Update(shelf);
+            // Đảo trạng thái của kệ sách
+            shelf.IsActive = !shelf.IsActive;
+
+            // Lấy toàn bộ các tầng (ShelfTiers) thuộc kệ này
+            var relatedTiers = await _context.ShelfTiers
+                .Where(t => t.ShelfId == id)
+                .ToListAsync();
+
+            // lấy danh sách các tầng của kệ
+            var tierIds = relatedTiers.Select(t => t.Id).ToList();
+
+            // Tìm toàn bộ sách đang nằm trên các tầng này
+            var relatedBooks = await _context.Books
+                .Where(b => tierIds.Contains(b.ShelfTierId))
+                .ToListAsync();
+
+            // Cập nhật trạng thái tầng theo kệ
+            foreach (var tier in relatedTiers)
+            {
+                tier.IsActive = shelf.IsActive;
+            }
+
+            // Cập nhật trạng thái sách theo kệ
+            foreach (var book in relatedBooks)
+            {
+                book.IsActive = shelf.IsActive;
+            }
+
+            // Lưu thay đổi vào cơ sở dữ liệu (EF Core sẽ track cả Kệ, Tầng và Sách)
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+            var statusText = shelf.IsActive ? "hiện" : "ẩn";
+            return Json(new
+            {
+                success = true,
+                message = $"Đã {statusText} kệ sách, {relatedTiers.Count} tầng kệ và {relatedBooks.Count} cuốn sách bên trong."
+            });
         }
 
-        // ==========================================
-        // CÁC API XỬ LÝ AJAX CHO TẦNG KỆ (MODAL)
-        // ==========================================
 
         // Lấy danh sách tầng của 1 kệ cụ thể
         [HttpGet]
@@ -127,7 +156,7 @@ namespace QuanLyThuVien.Web.Controllers
             });
         }
 
-        // Thêm mới hoặc Cập nhật Tầng (Bỏ kiểm tra giới hạn số lượng tầng của kệ)
+        // Thêm mới hoặc Cập nhật Tầng
         [HttpPost]
         public async Task<IActionResult> SaveTier(int id, int shelfId, string tierName, int capacity)
         {
@@ -136,8 +165,8 @@ namespace QuanLyThuVien.Web.Controllers
                 if (string.IsNullOrWhiteSpace(tierName))
                     return Json(new { success = false, message = "Tên tầng không được để trống." });
 
-                if (capacity <= 0)
-                    return Json(new { success = false, message = "Sức chứa giới hạn sách phải lớn hơn 0." });
+                if (capacity <= 0 || capacity > 50)
+                    return Json(new { success = false, message = "Sức chứa giới hạn sách phải lớn hơn 0 nhỏ hơn 50." });
 
                 if (id > 0)
                 {
@@ -175,14 +204,36 @@ namespace QuanLyThuVien.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> ToggleTierStatus(int id)
         {
+            // lấy thông tin tầng kệ
             var tier = await _context.ShelfTiers.FindAsync(id);
-            if (tier == null) return Json(new { success = false, message = "Không tìm thấy tầng." });
+            if (tier == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy tầng." });
+            }
 
-            tier.IsActive = !tier.IsActive; // Đảo ngược trạng thái
-            _context.ShelfTiers.Update(tier);
+            // đảo trạng thái tầng
+            tier.IsActive = !tier.IsActive;
+
+            // lấy toàn bộ sách đang được xếp trên tầng này
+            var relatedBooks = await _context.Books
+                .Where(b => b.ShelfTierId == id)
+                .ToListAsync();
+
+            // cập nhật trạng thái sách theo tầng
+            foreach (var book in relatedBooks)
+            {
+                book.IsActive = tier.IsActive;
+            }
+
+
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+            var statusText = tier.IsActive ? "hiện" : "ẩn";
+            return Json(new
+            {
+                success = true,
+                message = $"Đã {statusText} tầng và {relatedBooks.Count} cuốn sách nằm trên tầng này."
+            });
         }
     }
 }

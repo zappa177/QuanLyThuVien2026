@@ -1,4 +1,6 @@
-﻿// 1. Mở Modal Giỏ Hàng (Giữ nguyên)
+﻿
+// xử lý giỏ hàng
+//Mở Modal Giỏ Hàng
 function openCartModal() {
     $('#cartModalContent').html('<div class="text-center py-3">Đang tải...</div>');
     $('#cartModal').modal('show');
@@ -36,7 +38,7 @@ function openCartModal() {
     });
 }
 
-// 2. Xóa sách khỏi giỏ (ĐÃ THÊM LẠI TOKEN)
+// Xóa sách khỏi giỏ
 function removeCartItem(cartId) {
     if (confirm("Xóa cuốn sách này khỏi giỏ?")) {
         // Lấy Token bảo mật từ giao diện
@@ -52,7 +54,7 @@ function removeCartItem(cartId) {
             type: 'POST',
             data: {
                 id: cartId,
-                __RequestVerificationToken: token // <--- Nhét khóa vào để qua cửa bảo vệ
+                __RequestVerificationToken: token //khóa
             },
             success: function (res) {
                 if (res.success) {
@@ -78,7 +80,7 @@ function removeCartItem(cartId) {
     }
 }
 
-// 3. Tạo phiếu mượn (ĐÃ THÊM LẠI TOKEN)
+// Tạo phiếu mượn
 function createTicketFromCart() {
     var token = $('input[name="__RequestVerificationToken"]').val();
     var targetUser = $('#targetUsername').is(':visible') ? $('#targetUsername').val() : '';
@@ -95,7 +97,7 @@ function createTicketFromCart() {
         type: 'POST',
         data: {
             targetUsername: targetUser,
-            __RequestVerificationToken: token // <--- Nhét khóa vào
+            __RequestVerificationToken: token //khóa
         },
         success: function (res) {
             if (res.success) {
@@ -117,12 +119,33 @@ function createTicketFromCart() {
     });
 }
 
-///////////////js cho nút lên top hiện khi cuộn trang
+//hàm thêm vào giỏ hàng từ button "Thêm vào giỏ" trên modal thông tin sách
+function addToCartFromModal() {
+    var bookId = $('#infoBookId').val();
+    addToCart(bookId);
+}
+//hàm thêm vào giỏ hàng từ button "Thêm vào giỏ" trên trang danh sách sách và modal thông tin sách
+function addToCart(bookId) {
+    $.post('/Home/AddToCartDb', { bookId: bookId }, function (res) {
+        if (res.success) {
+            alert("Đã thêm vào giỏ hàng!");
+            updateCartBadge(res.newCount);
+        } else {
+            alert(res.message);
+        }
+    }).fail(function () {
+        alert("Lỗi kết nối đến máy chủ.");
+    });
+}
 
-// 1. Lấy phần tử nút Lên Top
+
+
+//js cho nút lên top
+
+// Lấy phần tử nút Lên Top
 let btnBackToTop = document.getElementById("btnBackToTop");
 
-// 2. Bắt sự kiện khi người dùng cuộn chuột
+// Bắt sự kiện khi người dùng cuộn chuột
 window.onscroll = function () {
     scrollFunction();
 };
@@ -136,7 +159,7 @@ function scrollFunction() {
     }
 }
 
-// 3. Sự kiện khi bấm vào nút
+// Sự kiện khi bấm vào nút
 btnBackToTop.addEventListener("click", function () {
     window.scrollTo({
         top: 0,
@@ -144,7 +167,10 @@ btnBackToTop.addEventListener("click", function () {
     });
 });
 
-// Hàm điều khiển Sidebar trên Mobile
+
+
+
+// Hàm điều khiển Sidebar trên Mobile (ẩn hiện sidebar)
 function toggleSidebar() {
     var sidebar = document.getElementById("sidebar");
     var overlay = document.getElementById("sidebarOverlay");

@@ -17,7 +17,7 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        // 1. GIAO DIỆN CHÍNH
+        // categories/index
         public async Task<IActionResult> Index(string searchName)
         {
             var query = _context.Categories.AsQueryable();
@@ -40,16 +40,9 @@ namespace QuanLyThuVien.Web.Controllers
             return View(categories);
         }
 
-        // 2. LẤY THÔNG TIN ĐỂ SỬA
-        [HttpGet]
-        public async Task<IActionResult> GetCategory(int id)
-        {
-            var category = await _context.Categories.FindAsync(id);
-            if (category == null) return NotFound();
-            return Json(new { id = category.Id, name = category.Name });
-        }
 
-        // 2. Thêm / Cập nhật (Trả về JSON)
+
+        // lưu category khi thêm hoặc chỉnh sửa
         [HttpPost]
         public async Task<IActionResult> SaveCategory(int id, string name)
         {
@@ -72,18 +65,41 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true });
         }
 
-        // 3. Ẩn / Hiện Thể loại (Set IsActive = false/true - Trả về JSON)
+        // ẩn hiện thể loại
         [HttpPost]
         public async Task<IActionResult> ToggleCategoryStatus(int id)
         {
+            // lấy thông tin thể loại
             var category = await _context.Categories.FindAsync(id);
-            if (category == null) return Json(new { success = false, message = "Không tìm thấy thể loại." });
+            if (category == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy thể loại." });
+            }
 
+            // đảo ngược trạng thái của thể loại
             category.IsActive = !category.IsActive;
-            _context.Categories.Update(category);
+
+            // lấy toàn bộ sách thuộc thể loại này
+            var relatedBooks = await _context.Books
+                .Where(b => b.CategoryId == id)
+                .ToListAsync();
+
+            // cập nhật trạng thái của tất cả sách liên quan theo trạng thái của thể loại
+            foreach (var book in relatedBooks)
+            {
+                book.IsActive = category.IsActive;
+            }
+
+            // Không cần gọi _context.Categories.Update(category)  vì chỉ cập nhật 1 thuộc tính
             await _context.SaveChangesAsync();
 
-            return Json(new { success = true });
+            // Trả về câu thông báo chi tiết hơn để hiển thị cho người dùng
+            var statusText = category.IsActive ? "hiện" : "ẩn";
+            return Json(new
+            {
+                success = true,
+                message = $"Đã {statusText} thể loại và {relatedBooks.Count} cuốn sách liên quan."
+            });
         }
     }
 }

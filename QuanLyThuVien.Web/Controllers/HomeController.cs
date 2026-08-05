@@ -75,7 +75,7 @@ namespace QuanLyThuVien.Web.Controllers
 
         //lấy chi tiết sách
         [HttpGet]
-        [AllowAnonymous] // Hoặc giữ nguyên [Authorize] mặc định của Controller
+        [AllowAnonymous]
         public async Task<IActionResult> GetBookDetails(int id)
         {
             var book = await _bookService.GetBookByIdAsync(id);
@@ -374,7 +374,7 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                await _bookService.DeleteBookAsync(id); // Giả định Service Delete đang set IsActive = false
+                await _bookService.DeleteBookAsync(id);
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -421,16 +421,16 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(count);
         }
 
-        // 2. HÀM THÊM SÁCH VÀO GIỎ
+        // thêm sách vào giỏ
         [HttpPost]
         public async Task<IActionResult> AddToCartDb(int bookId)
         {
             var user = await _userManager.GetUserAsync(User);
 
-            // Lấy hồ sơ mượn sách
+            //lấy thông tin người mượn
             var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user!.Id);
 
-            // Nếu là Thủ thư chưa có hồ sơ mượn, tự động tạo mới 1 lần duy nhất
+            // thủ thư thì tự động tạo 1 student code lần đầu 
             if (reader == null && User.IsInRole("Librarian"))
             {
                 reader = new Readers { ApplicationUserId = user!.Id, StudentCode = "LIB-" + DateTime.Now.ToString("ddMMyyHHmm") };
@@ -442,22 +442,22 @@ namespace QuanLyThuVien.Web.Controllers
                 return Json(new { success = false, message = "Không tìm thấy hồ sơ người mượn." });
             }
 
-            // --- KIỂM TRA ĐIỀU KIỆN ---
-            // 1. Kiểm tra giới hạn 2 cuốn
+
+            // giới hạn 2 cuốn sách 1 giỏ hàng
             int currentCount = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
             if (currentCount >= 2)
             {
                 return Json(new { success = false, message = "Giỏ hàng đã đầy (tối đa 2 cuốn)." });
             }
 
-            // 2. Kiểm tra sách có bị trùng không
+            //kiểm tra trùng lặp sách
             bool isExist = await _context.CartItems.AnyAsync(c => c.ReaderId == reader.Id && c.BookId == bookId);
             if (isExist)
             {
                 return Json(new { success = false, message = "Sách này đã có trong giỏ hàng!" });
             }
 
-            // --- LƯU VÀO DATABASE ---
+            //lưu vào table cartitem (giỏ hàng)
             var newItem = new CartItems
             {
                 ReaderId = reader.Id,
@@ -471,7 +471,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true, newCount = currentCount + 1 });
         }
 
-
+        //trang error
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)] //không lưu cache  
         public IActionResult Error()
         {

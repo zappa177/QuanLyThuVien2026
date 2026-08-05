@@ -165,23 +165,23 @@
 
 @section Scripts {
     <script>
-        // --- XỬ LÝ KỆ SÁCH ---
+        // button thêm kệ sách
         function openAddShelfModal() {
             $('#ShelfId').val(0);
             $('#ShelfName').val('');
             $('#shelfModalTitle').text('Thêm kệ sách');
-            var myModal = new bootstrap.Modal(document.getElementById('shelfModal'));
+            var myModal = new bootstrap.Modal(document.getElementById('shelfModal'));//mở Modal thêm sửa kệ
             myModal.show();
         }
-
+        // button chỉnh sửa
         function openEditShelfModal(id, name) {
             $('#ShelfId').val(id);
             $('#ShelfName').val(name);
             $('#shelfModalTitle').text('Chỉnh sửa kệ sách');
-            var myModal = new bootstrap.Modal(document.getElementById('shelfModal'));
+            var myModal = new bootstrap.Modal(document.getElementById('shelfModal')); //mở Modal thêm sửa kệ
             myModal.show();
         }
-
+        //hàm submit form để lưu tên kệ /shelves/saveshelf
         $('#shelfForm').submit(function (e) {
             e.preventDefault();
             var formData = $(this).serialize();
@@ -194,7 +194,7 @@
                 }
             });
         });
-
+        //hàm submit ẩn hiện kệ ở shelves/index
         function toggleShelfStatus(id) {
             $.post('/Shelves/ToggleShelfStatus', { id: id }, function (response) {
                 if (response.success) {
@@ -205,17 +205,17 @@
             });
         }
 
-        // --- XỬ LÝ QUẢN LÝ TẦNG ---
+        // button quản lý tầng
         function openManageTierModal(shelfId, shelfName) {
             $('#ModalShelfId').val(shelfId);
             $('#modalShelfTitle').text('Quản lý tầng - ' + shelfName);
             resetTierForm();
             loadTiers(shelfId);
 
-            var myModal = new bootstrap.Modal(document.getElementById('manageTierModal'));
+            var myModal = new bootstrap.Modal(document.getElementById('manageTierModal')); //mở modal quản lý tầng
             myModal.show();
         }
-
+        //hàm hiện danh sách tầng them id kệ
         function loadTiers(shelfId) {
             $.get('/Shelves/GetTiersByShelf', { shelfId: shelfId }, function (data) {
                 var rows = '';
@@ -236,19 +236,19 @@
                 $('#tierTableBody').html(rows);
             });
         }
-
+        //hàm button sửa trong quản lý tầng
         function editTier(id, name, capacity) {
             $('#TierId').val(id);
             $('#TierName').val(name);
             $('#Capacity').val(capacity);
         }
-
+        //hàm gia trí mặc định cho form tên tấng , giới hạn sách
         function resetTierForm() {
             $('#TierId').val(0);
             $('#TierName').val('');
             $('#Capacity').val(50);
         }
-
+        //hàm submit tạo tầng mới , button thêm tầng
         $('#tierForm').submit(function (e) {
             e.preventDefault();
             var formData = $(this).serialize();
@@ -263,7 +263,7 @@
                 }
             });
         });
-
+        //hàm ẩn hiện tầng trong quản lý tầng
         function toggleTierStatus(tierId, shelfId) {
             $.post('/Shelves/ToggleTierStatus', { id: tierId }, function (response) {
                 if (response.success) {

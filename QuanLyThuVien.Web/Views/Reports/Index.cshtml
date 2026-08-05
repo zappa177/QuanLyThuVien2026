@@ -17,7 +17,7 @@
         </form>
     </div>
 
-    <!-- Bảng dữ liệu linh hoạt theo lựa chọn -->
+    <!-- Bảng dữ liệu theo lựa chọn -->
     <div class="bg-white mx-2 mb-5">
         <table class="table table-bordered align-middle text-center mb-0" style="border-color: #dee2e6;">
 
@@ -81,7 +81,7 @@
         </table>
     </div>
 
-    <!-- Khu vực nút xuất báo cáo -->
+    <!--nút xuất báo cáo -->
     <div class="d-flex justify-content-center gap-4 mb-5">
         <a asp-action="ExportExcel" asp-route-reportType="@currentReportType" class="btn rounded-0 text-white px-4 py-2 fs-5 shadow-sm" style="background-color: #0d6efd;">
             Xuất báo cáo excel
@@ -92,11 +92,11 @@
     </div>
 
     <!-- Phân trang -->
-    <div class="text-center mt-5 text-dark fs-5">
+    @* <div class="text-center mt-5 text-dark fs-5">
         <span style="cursor:pointer;" class="me-3">&lt;&lt;</span>
         <span style="cursor:pointer;" class="me-3">&lt;</span>
         <span class="me-3">1</span>
         <span style="cursor:pointer;" class="me-3">&gt;</span>
         <span style="cursor:pointer;">&gt;&gt;</span>
-    </div>
+    </div> *@
 </div>

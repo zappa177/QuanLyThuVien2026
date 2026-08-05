@@ -20,9 +20,7 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // 1. CHỈNH SỬA THÔNG TIN CÁ NHÂN (GET)
-        // ==========================================
+        //lấy thông tin cá nhân của thủ thư , reader
         [HttpGet]
         public async Task<IActionResult> Edit()
         {
@@ -50,16 +48,14 @@ namespace QuanLyThuVien.Web.Controllers
 
                 if (readerInfo != null)
                 {
-                    model.ClassName = readerInfo.ClassName; // Lưu ý: Đổi thành tên thuộc tính lớp thực tế trong bảng Readers của bạn (ví dụ: Class, ClassName,...)
+                    model.ClassName = readerInfo.ClassName;
                 }
             }
 
             return View(model);
         }
 
-        // ==========================================
-        // 2. CHỈNH SỬA THÔNG TIN CÁ NHÂN (POST)
-        // ==========================================
+        //cập nhật thông tin cá nhân của thủ thư , reader
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(UserProfileViewModel model)

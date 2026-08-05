@@ -6,7 +6,7 @@
 }
 
 <div class="container-fluid mt-3">
-    <!-- Thanh Tab menu phụ phía trên -->
+    <!-- tab menu -->
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
             <a class="nav-link text-dark" asp-controller="Shelves" asp-action="Index">Tầng kệ sách</a>
@@ -184,27 +184,27 @@
 
 @section Scripts {
     <script>
-        // 1. Logic ẩn/hiện ô "Mã người dùng" cho form Thêm mới
+        // hàm ẩn hiện ô nhập mã người dùng theo role trong modal thêm người dùng
         $('#addRoleSelect').change(function () {
             if ($(this).val() === 'Reader') {
-                $('#addReaderIdGroup').show();
+                $('#addReaderIdGroup').show(); //nếu role là reader thì hiện ô nhập mã
             } else {
                 $('#addReaderIdGroup').hide();
                 $('#addReaderIdGroup input').val(''); // Clear giá trị nếu ẩn
             }
         });
 
-        // 2. Logic ẩn/hiện ô "Mã người dùng" cho form Chỉnh sửa
+        // hàm ẩn hiện ô nhập mã người dùng theo role trong modal sửa người dùng
         $('#editRoleSelect').change(function () {
             if ($(this).val() === 'Reader') {
-                $('#editReaderIdGroup').show();
+                $('#editReaderIdGroup').show(); //nếu role là reader thì hiện ô nhập mã
             } else {
                 $('#editReaderIdGroup').hide();
-                $('#editReaderIdInput').val('');
+                $('#editReaderIdInput').val(''); // Clear giá trị nếu ẩn
             }
         });
 
-        // 3. Đổ dữ liệu vào Modal Chỉnh sửa khi bấm nút "Chỉnh sửa"
+        // hàm khi bấm nút chỉnh sửa trong users/index , lấy dữ liệu của người dùng hiện tại gán vào các ô của modal sửa
         $('.btn-edit').click(function () {
             var id = $(this).data('id');
             var role = $(this).data('role');
@@ -214,7 +214,7 @@
             $('#editRoleSelect').val(role).trigger('change'); // trigger để chạy sự kiện show/hide ô mã
             $('#editReaderIdInput').val(readerId);
 
-            // Hiển thị modal
+            // Hiển thị modal chỉnh sửa
             var editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
             editModal.show();
         });

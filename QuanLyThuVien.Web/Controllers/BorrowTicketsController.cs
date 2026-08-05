@@ -22,7 +22,9 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
             _userManager = userManager;
         }
-        public async Task<IActionResult> Index(string? ticketId, string? borrower, DateTime? fromDate, DateTime? toDate, BorrowStatus? status, string sortOrder = "date_desc", int page = 1)
+
+        //lấy danh sách phiếu và phân trang
+        public async Task<IActionResult> Index(string? SearchTicketId, string? SearchBorrower, DateTime? fromDate, DateTime? toDate, BorrowStatus? status, string sortOrder = "date_desc", int page = 1)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
@@ -32,7 +34,7 @@ namespace QuanLyThuVien.Web.Controllers
                     .ThenInclude(r => r!.ApplicationUser)
                 .AsQueryable();
 
-            // --- PHÂN QUYỀN DỮ LIỆU THEO ROLE ---
+            // phân quyền hiển thị
             if (User.IsInRole("Reader"))
             {
                 // Khách (Reader): Chỉ được xem phiếu của chính mình
@@ -48,11 +50,11 @@ namespace QuanLyThuVien.Web.Controllers
                 }
                 query = query.Where(t => t.ReaderId == reader.Id);
             }
-            // Nếu là Admin hoặc Librarian: Giữ nguyên query để xem tất cả
+            //admin và thủ thư thì xem tất cả phiếu
 
             // Cập nhật trạng thái Overdue (Quá hạn > 7 ngày) tự động khi load danh sách
             var pendingOrBorrowingTickets = await query
-                .Where(t => t.Status == BorrowStatus.Borrowing || t.Status == BorrowStatus.Pending)
+                .Where(t => t.Status == BorrowStatus.Borrowing)
                 .ToListAsync();
 
             bool hasChanges = false;
@@ -66,14 +68,14 @@ namespace QuanLyThuVien.Web.Controllers
             }
             if (hasChanges) await _context.SaveChangesAsync();
 
-            // --- ÁP DỤNG BỘ LỌC TÌM KIẾM ---
-            if (!string.IsNullOrEmpty(ticketId))
-                query = query.Where(t => t.Id.ToString().Contains(ticketId));
+            // lọc tìm kiếm theo mã phiếu
+            if (!string.IsNullOrEmpty(SearchTicketId))
+                query = query.Where(t => t.Id.ToString().Contains(SearchTicketId));
 
             // CHỈ ADMIN VÀ THỦ THƯ MỚI ĐƯỢC TÌM THEO TÊN NGƯỜI MƯỢN
-            if ((User.IsInRole("Admin") || User.IsInRole("Librarian")) && !string.IsNullOrEmpty(borrower))
+            if ((User.IsInRole("Admin") || User.IsInRole("Librarian")) && !string.IsNullOrEmpty(SearchBorrower))
             {
-                query = query.Where(t => t.Reader!.ApplicationUser!.FullName!.Contains(borrower));
+                query = query.Where(t => t.Reader!.ApplicationUser!.UserName!.Contains(SearchBorrower));
             }
 
             if (fromDate.HasValue)
@@ -83,7 +85,7 @@ namespace QuanLyThuVien.Web.Controllers
             if (status.HasValue)
                 query = query.Where(t => t.Status == status.Value);
 
-            // --- SẮP XẾP ---
+            // sắp xếp
             ViewBag.CurrentSort = sortOrder;
             switch (sortOrder)
             {
@@ -104,8 +106,8 @@ namespace QuanLyThuVien.Web.Controllers
             var model = new BorrowTicketIndexViewModel
             {
                 Tickets = new PagedResult<BorrowTickets>(items, totalItems, page, pageSize),
-                SearchTicketId = ticketId,
-                SearchBorrower = borrower,
+                SearchTicketId = SearchTicketId,
+                SearchBorrower = SearchBorrower,
                 FromDate = fromDate,
                 ToDate = toDate,
                 Status = status
@@ -113,9 +115,8 @@ namespace QuanLyThuVien.Web.Controllers
 
             return View(model);
         }
-        // ==========================================
-        // 2. LẤY CHI TIẾT PHIẾU LÊN MODAL
-        // ==========================================
+
+        //lấy thông tin chi tiết cho phiếu mượn
         [HttpGet]
         public async Task<IActionResult> GetTicketDetails(int id)
         {
@@ -128,7 +129,7 @@ namespace QuanLyThuVien.Web.Controllers
 
             if (ticket == null) return NotFound();
 
-            // Bảo mật bổ sung: Nếu là Khách, chặn không cho xem chi tiết phiếu của người khác
+            //reader không xem phiếu khác
             if (User.IsInRole("Reader"))
             {
                 var user = await _userManager.GetUserAsync(User);
@@ -142,7 +143,7 @@ namespace QuanLyThuVien.Web.Controllers
             var data = new
             {
                 id = ticket.Id,
-                borrowerName = ticket.Reader?.ApplicationUser?.FullName,
+                borrowerName = ticket.Reader?.ApplicationUser?.UserName,
                 borrowDate = ticket.BorrowDate.ToString("dd/MM/yyyy"),
                 dueDate = ticket.ExpectedReturnDate.ToString("dd/MM/yyyy"),
                 returnDate = ticket.ActualReturnDate?.ToString("dd/MM/yyyy") ?? "Chưa trả",
@@ -155,9 +156,8 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(data);
         }
 
-        // ==========================================
-        // 3. CẬP NHẬT TRẠNG THÁI (CHỈ ADMIN VÀ THỦ THƯ)
-        // ==========================================
+
+        // cập nhật borrow status
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         [ValidateAntiForgeryToken]
@@ -172,7 +172,7 @@ namespace QuanLyThuVien.Web.Controllers
 
             ticket.Note = model.Note;
 
-            // Xử lý gán ngày trả thực tế nếu chuyển sang Returned
+            // nếu cập nhật là returned thì actualreturndate là thời gian lúc cập nhật
             if (model.NewStatus == BorrowStatus.Returned && ticket.Status != BorrowStatus.Returned)
             {
                 ticket.ActualReturnDate = DateTime.UtcNow;
@@ -181,7 +181,7 @@ namespace QuanLyThuVien.Web.Controllers
             // Cập nhật trạng thái mới cho phiếu
             ticket.Status = model.NewStatus;
 
-            // ĐỒNG BỘ TRẠNG THÁI SÁCH (BookStatus) CHO TẤT CẢ SÁCH TRONG PHIẾU
+            // 
             foreach (var detail in ticket.TicketDetails)
             {
                 if (detail.Book != null)
@@ -205,6 +205,54 @@ namespace QuanLyThuVien.Web.Controllers
             await _context.SaveChangesAsync();
 
             return Json(new { success = true });
+        }
+
+
+        //kiểm tra phiếu mượn trước khi xác nhận
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> CheckTicket(int ticketId)
+        {
+            // 1. Lấy thông tin phiếu mượn kèm theo chi tiết và sách
+            var ticket = await _context.BorrowTickets
+                .Include(t => t.TicketDetails)
+                    .ThenInclude(d => d.Book)
+                .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            if (ticket == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy phiếu mượn." });
+            }
+
+            // 2. Kiểm tra xem có bất kỳ cuốn sách nào khác trạng thái Available không
+            bool hasUnavailableBook = ticket.TicketDetails
+                .Any(d => d.Book != null && d.Book.Status != BookStatus.Available);
+
+            if (hasUnavailableBook)
+            {
+                // 3. Nếu có sách không khả dụng -> Hủy phiếu
+                ticket.Status = BorrowStatus.Canceled;
+                ticket.Note = string.IsNullOrEmpty(ticket.Note)
+                    ? "Hệ thống tự động hủy vì có sách không khả dụng."
+                    : ticket.Note + "\n(Hệ thống tự động hủy vì có sách không khả dụng).";
+
+                await _context.SaveChangesAsync();
+
+                return Json(new
+                {
+                    success = true,
+                    isCanceled = true,
+                    message = "Phiếu đã tự động bị HỦY do có sách trong phiếu không khả dụng (đã bị mượn hoặc hỏng)."
+                });
+            }
+
+            // 4. Nếu tất cả sách đều Available
+            return Json(new
+            {
+                success = true,
+                isCanceled = false,
+                message = "Tất cả sách đều khả dụng. Phiếu hợp lệ!"
+            });
         }
     }
 }

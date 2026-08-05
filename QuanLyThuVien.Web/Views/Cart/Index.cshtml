@@ -7,7 +7,7 @@
 <div class="container py-5" style="max-width: 800px;">
     @Html.AntiForgeryToken()
 
-    <!-- Tiêu đề và chú thích -->
+    <!-- Tên -->
     <div class="text-center mb-4">
         <h2 class="fw-bold">Giỏ hàng</h2>
         <p class="text-danger m-0" style="font-size: 0.95rem;">Tối đa được phép mượn 2 cuốn sách</p>
@@ -60,77 +60,77 @@
 
 @section Scripts {
     <script>
-        // 1. Hàm xóa sản phẩm khỏi giỏ hàng
-        function removeItem(cartId) {
-            if (confirm("Bạn có chắc chắn muốn xóa cuốn sách này khỏi giỏ hàng?")) {
+        // // 1. Hàm xóa sản phẩm khỏi giỏ hàng
+        // function removeItem(cartId) {
+        //     if (confirm("Bạn có chắc chắn muốn xóa cuốn sách này khỏi giỏ hàng?")) {
                 
-                // LẤY CHÌA KHÓA BẢO MẬT
-                var token = $('input[name="__RequestVerificationToken"]').val();
+        //         // LẤY CHÌA KHÓA BẢO MẬT
+        //         var token = $('input[name="__RequestVerificationToken"]').val();
 
-                $.ajax({
-                    url: '/Cart/RemoveItem',
-                    type: 'POST',
-                    data: { id: cartId },
-                    // NHÉT CHÌA KHÓA VÀO HEADER
-                    headers: {
-                        "RequestVerificationToken": token
-                    },
-                    success: function (res) {
-                        if (res.success) {
-                            $('#cart-item-' + cartId).fadeOut(300, function() { 
-                                $(this).remove(); 
-                                if ($('.cart-row').length === 0) {
-                                    location.reload();
-                                }
-                            });
+        //         $.ajax({
+        //             url: '/Cart/RemoveItem',
+        //             type: 'POST',
+        //             data: { id: cartId },
+        //             // NHÉT CHÌA KHÓA VÀO HEADER
+        //             headers: {
+        //                 "RequestVerificationToken": token
+        //             },
+        //             success: function (res) {
+        //                 if (res.success) {
+        //                     $('#cart-item-' + cartId).fadeOut(300, function() { 
+        //                         $(this).remove(); 
+        //                         if ($('.cart-row').length === 0) {
+        //                             location.reload();
+        //                         }
+        //                     });
                             
-                            $.get('/Home/GetCartItemCount', function (count) {
-                                let badge = $('#cartItemCountBadge');
-                                if (badge.length > 0) {
-                                    badge.text(count);
-                                    badge.css('display', count > 0 ? 'inline-block' : 'none');
-                                }
-                            });
-                        } else {
-                            alert("Lỗi: " + res.message);
-                        }
-                    },
-                    error: function (xhr) {
-                        alert("Không thể kết nối đến máy chủ. Mã lỗi: " + xhr.status);
-                    }
-                });
-            }
-        }
+        //                     $.get('/Home/GetCartItemCount', function (count) {
+        //                         let badge = $('#cartItemCountBadge');
+        //                         if (badge.length > 0) {
+        //                             badge.text(count);
+        //                             badge.css('display', count > 0 ? 'inline-block' : 'none');
+        //                         }
+        //                     });
+        //                 } else {
+        //                     alert("Lỗi: " + res.message);
+        //                 }
+        //             },
+        //             error: function (xhr) {
+        //                 alert("Không thể kết nối đến máy chủ. Mã lỗi: " + xhr.status);
+        //             }
+        //         });
+        //     }
+        // }
 
         // 2. Hàm tạo phiếu mượn
-        function createBorrowTicket() {
-            $('#btnCreateTicket').prop('disabled', true).text('Đang xử lý...');
+        // function createBorrowTicket() {
+        //     $('#btnCreateTicket').prop('disabled', true).text('Đang xử lý...');
             
-            // LẤY CHÌA KHÓA BẢO MẬT
-            var token = $('input[name="__RequestVerificationToken"]').val();
+        //     // LẤY CHÌA KHÓA BẢO MẬT
+        //     var token = $('input[name="__RequestVerificationToken"]').val();
 
-            $.ajax({
-                url: '/Cart/CreateBorrowTicket',
-                type: 'POST',
-                // NHÉT CHÌA KHÓA VÀO HEADER
-                headers: {
-                    "RequestVerificationToken": token
-                },
-                success: function (res) {
-                    if (res.success) {
-                        alert(res.message);
-                        window.location.href = '/BorrowTickets/Index'; 
-                    } else {
-                        alert(res.message);
-                        $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
-                    }
-                },
-                error: function (xhr) {
-                    alert("Có lỗi xảy ra khi tạo phiếu mượn.");
-                    $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
-                }
-            });
-        }
+        //     $.ajax({
+        //         url: '/Cart/CreateBorrowTicket',
+        //         type: 'POST',
+        //         // NHÉT CHÌA KHÓA VÀO HEADER
+        //         headers: {
+        //             "RequestVerificationToken": token
+        //         },
+        //         success: function (res) {
+        //             if (res.success) {
+        //                 alert(res.message);
+        //                 window.location.href = '/BorrowTickets/Index'; 
+        //             } else {
+        //                 alert(res.message);
+        //                 $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
+        //             }
+        //         },
+        //         error: function (xhr) {
+        //             alert("Có lỗi xảy ra khi tạo phiếu mượn.");
+        //             $('#btnCreateTicket').prop('disabled', false).text('Tạo phiếu mượn');
+        //         }
+        //     });
+        // }
     </script>
 }
 }

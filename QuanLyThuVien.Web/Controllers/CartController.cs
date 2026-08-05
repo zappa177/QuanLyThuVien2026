@@ -21,7 +21,7 @@ namespace QuanLyThuVien.Web.Controllers
             _userManager = userManager;
         }
 
-        // 1. LẤY DỮ LIỆU ĐỔ VÀO MODAL GIỎ HÀNG (Dùng GET, không cần Token)
+        // lấy thông tin giỏ hàng của user hiện tại
         [HttpGet]
         public async Task<IActionResult> GetCartData()
         {
@@ -51,59 +51,62 @@ namespace QuanLyThuVien.Web.Controllers
             });
         }
 
-        // 2. THÊM SÁCH VÀO GIỎ
+        //// 2. THÊM SÁCH VÀO GIỎ
+        //[HttpPost]
+        //[ValidateAntiForgeryToken] // <-- KHIÊN BẢO MẬT ĐÃ ĐƯỢC BẬT LẠI
+        //public async Task<IActionResult> AddToCart(int bookId)
+        //{
+        //    var user = await _userManager.GetUserAsync(User);
+        //    if (user == null) return Unauthorized();
+
+        //    // 1. KIỂM TRA TÌNH TRẠNG SÁCH NGAY TỪ ĐẦU
+        //    var book = await _context.Books.FindAsync(bookId);
+        //    if (book == null)
+        //    {
+        //        return Json(new { success = false, message = "Không tìm thấy cuốn sách này!" });
+        //    }
+
+        //    if (book.Status != QuanLyThuVien.Domain.Enums.BookStatus.Available)
+        //    {
+        //        return Json(new { success = false, message = "Sách này hiện không có sẵn để mượn (Đang được mượn hoặc thất lạc)." });
+        //    }
+
+        //    // 2. KHỞI TẠO HOẶC LẤY THÔNG TIN ĐỘC GIẢ
+        //    var reader = await GetOrCreateReaderAsync(user.Id.ToString());
+
+        //    // 3. KIỂM TRA GIỚI HẠN GIỎ HÀNG
+        //    var cartCount = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
+        //    if (cartCount >= 2)
+        //    {
+        //        return Json(new { success = false, message = "Giỏ hàng đã đầy. Tối đa chỉ được mượn 2 cuốn sách." });
+        //    }
+
+        //    // 4. KIỂM TRA TRÙNG LẶP TRONG GIỎ HÀNG
+        //    var isExist = await _context.CartItems.AnyAsync(c => c.ReaderId == reader.Id && c.BookId == bookId);
+        //    if (isExist)
+        //    {
+        //        return Json(new { success = false, message = "Cuốn sách này đã có trong giỏ hàng." });
+        //    }
+
+        //    // 5. THÊM VÀO GIỎ VÀ LƯU LẠI
+        //    _context.CartItems.Add(new CartItems { ReaderId = reader.Id, BookId = bookId });
+        //    await _context.SaveChangesAsync();
+
+        //    return Json(new { success = true, newCount = cartCount + 1, message = "Đã thêm sách vào giỏ hàng thành công." });
+        //}
+
+
+
+
+        // XÓA SẢN PHẨM KHỎI GIỎ 
         [HttpPost]
-        [ValidateAntiForgeryToken] // <-- KHIÊN BẢO MẬT ĐÃ ĐƯỢC BẬT LẠI
-        public async Task<IActionResult> AddToCart(int bookId)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized();
-
-            // 1. KIỂM TRA TÌNH TRẠNG SÁCH NGAY TỪ ĐẦU
-            var book = await _context.Books.FindAsync(bookId);
-            if (book == null)
-            {
-                return Json(new { success = false, message = "Không tìm thấy cuốn sách này!" });
-            }
-
-            if (book.Status != QuanLyThuVien.Domain.Enums.BookStatus.Available)
-            {
-                return Json(new { success = false, message = "Sách này hiện không có sẵn để mượn (Đang được mượn hoặc thất lạc)." });
-            }
-
-            // 2. KHỞI TẠO HOẶC LẤY THÔNG TIN ĐỘC GIẢ
-            var reader = await GetOrCreateReaderAsync(user.Id.ToString());
-
-            // 3. KIỂM TRA GIỚI HẠN GIỎ HÀNG
-            var cartCount = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
-            if (cartCount >= 2)
-            {
-                return Json(new { success = false, message = "Giỏ hàng đã đầy. Tối đa chỉ được mượn 2 cuốn sách." });
-            }
-
-            // 4. KIỂM TRA TRÙNG LẶP TRONG GIỎ HÀNG
-            var isExist = await _context.CartItems.AnyAsync(c => c.ReaderId == reader.Id && c.BookId == bookId);
-            if (isExist)
-            {
-                return Json(new { success = false, message = "Cuốn sách này đã có trong giỏ hàng." });
-            }
-
-            // 5. THÊM VÀO GIỎ VÀ LƯU LẠI
-            _context.CartItems.Add(new CartItems { ReaderId = reader.Id, BookId = bookId });
-            await _context.SaveChangesAsync();
-
-            return Json(new { success = true, newCount = cartCount + 1, message = "Đã thêm sách vào giỏ hàng thành công." });
-        }
-
-        // 3. XÓA SẢN PHẨM KHỎI GIỎ 
-        [HttpPost]
-        [ValidateAntiForgeryToken] // <-- KHIÊN BẢO MẬT ĐÃ ĐƯỢC BẬT LẠI
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveItem(int id)
         {
             var item = await _context.CartItems.FindAsync(id);
             if (item != null)
             {
-                // Dùng Remove nguyên bản vì bạn đã cấu hình bỏ qua Soft Delete cho bảng này
+
                 _context.CartItems.Remove(item);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true });
@@ -112,9 +115,9 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = false, message = "Không tìm thấy dữ liệu giỏ hàng cần xóa." });
         }
 
-        // 4. TẠO PHIẾU VÀ XÓA SẠCH GIỎ
+        // tạo phiếu và xóa sạch giỏ hàng của người dùng
         [HttpPost]
-        [ValidateAntiForgeryToken] // <-- KHIÊN BẢO MẬT ĐÃ ĐƯỢC BẬT LẠI
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTicket(string? targetUsername)
         {
             var currentUser = await _userManager.GetUserAsync(User);
@@ -164,7 +167,7 @@ namespace QuanLyThuVien.Web.Controllers
                 }
                 await _context.SaveChangesAsync();
 
-                // Xóa sạch giỏ hàng chuẩn MVC (Vì Soft Delete đã tha cho bảng này)
+                // Xóa sạch giỏ hàng 
                 _context.CartItems.RemoveRange(cartItems);
                 await _context.SaveChangesAsync();
 
@@ -178,12 +181,13 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
+        //
         private async Task<Readers> GetOrCreateReaderAsync(string userId)
         {
             Guid userGuid = Guid.Parse(userId);
             var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == userGuid);
 
-            if (reader == null)
+            if (reader == null) //thủ thư có thể thêm sách vào giỏ hàng và tạo phiếu , nếu là thủ thư thì tạo studentcode để thông tin trên phiếu
             {
                 reader = new Readers
                 {

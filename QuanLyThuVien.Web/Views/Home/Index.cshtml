@@ -8,7 +8,7 @@
 
 <div class="container-fluid mt-3 px-4">
 
-    <!-- ================= KHU VỰC 1: BỘ LỌC TÌM KIẾM & NÚT THÊM SÁCH ================= -->
+    <!--form tìm kiếm home/index -->
     <form asp-controller="Home" asp-action="Index" method="get" id="searchForm" class="mb-4 bg-white p-3 border-bottom shadow-sm">
         <input type="hidden" name="sortBy" value="@Model.SortBy" />
 
@@ -45,7 +45,7 @@
             <div class="col-md-5 d-flex align-items-center justify-content-end gap-2">
                 <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 border-0 text-dark">Tìm kiếm</button>
 
-                <!-- CHỈ ADMIN MỚI CÓ NÚT THÊM SÁCH -->
+                <!-- button thêm sách nếu là role admin -->
                 @if (User.IsInRole("Admin"))
                 {
                     <button type="button" class="btn btn-success fw-bold px-4 rounded-0 border-0" data-bs-toggle="modal" data-bs-target="#addBookModal">
@@ -56,7 +56,7 @@
         </div>
     </form>
 
-    <!-- ================= KHU VỰC 2: SẮP XẾP ================= -->
+    <!-- button sắp xếp -->
     <div class="d-flex align-items-center mb-4">
         <span class="fw-bold me-3">Sắp xếp :</span>
         <a href="@Url.Action("Index", new { sortBy = Model.SortBy == "Title" ? "TitleDesc" : "Title", searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })"
@@ -69,7 +69,7 @@
         </a>
     </div>
 
-    <!-- ================= KHU VỰC 3: GRID SÁCH (3x3) ================= -->
+    <!-- hiển thị sách -->
     <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
         @if (Model.Books != null && Model.Books.Items.Any())
         {
@@ -78,10 +78,10 @@
                 <div class="col">
                     <div class="card h-100 border rounded-0 shadow-sm book-item" data-id="@book.Id" style="cursor: pointer; background-color: #f9f9f9;overflow: hidden;">
 
-                        <!-- Ảnh bìa sách (Giữ nguyên class book-item để click mở modal bằng AJAX) -->
-                        <div class="text-center pt-3" style="background-image: url('/images/transparent-grid.png'); background-size: cover;">
+                        <!-- ảnh bìa sách -->
+                        <div class="text-center pt-3" style="background: #eee9e9; background-size: cover;">
                             <img src="@(string.IsNullOrEmpty(book.CoverImage) ? "/images/no-cover.png" : book.CoverImage)"
-                                 alt="@book.Title" style="height: 220px; object-fit: contain;" 
+                                 alt="@book.Title" style="height: 220px; object-fit: fill;" 
                                  class="w-100"/>
                         </div>
 
@@ -92,7 +92,7 @@
                             <p class="card-text mb-1" style="font-size: 0.9rem;">Năm xuất bản : @book.PublishYear</p>
                             <p class="card-text mb-0" style="font-size: 0.9rem;">Thể loại : @(book.Category?.Name ?? "")</p>
 
-                            <!-- RẼ NHÁNH: CHỈ KHÁCH VÀ THỦ THƯ MỚI HIỆN ICON GIỎ HÀNG -->
+                            <!-- chỉ khách và thủ thư hiện icon giỏ hàng ở card book-->
                             @if (User.IsInRole("Reader") || User.IsInRole("Librarian"))
                             {
                                 <button type="button" class="btn btn-link text-dark position-absolute p-0"
@@ -115,7 +115,7 @@
         }
     </div>
 
-    <!-- ================= KHU VỰC 4: PHÂN TRANG (PAGINATION) ================= -->
+    <!-- phân trang -->
     @if (Model.Books != null && Model.Books.TotalPages > 1)
     {
         <nav class="mt-5 mb-3 d-flex justify-content-center">
@@ -138,25 +138,24 @@
     }
 </div>
 
-<!-- ================= GỌI CÁC MODAL PARTIAL PHÂN QUYỀN ================= -->
-<partial name="_InfoBookModalPartial" />
+<!-- gọi modal -->
+<partial name="_InfoBookModalPartial" /> <!-- modal thông tin sách -->
 @if (User.IsInRole("Admin"))
 {
-    <partial name="_AddBookModalPartial" />
-    <partial name="_EditBookModalPartial" />
+    <partial name="_AddBookModalPartial" /><!-- modal thêm sách -->
+    <partial name="_EditBookModalPartial" /><!-- modal sửa sách-->
 }
 @if (User.IsInRole("Librarian"))
 {
-    <partial name="_UpdateStatusModalPartial" />
+    <partial name="_UpdateStatusModalPartial" /><!-- modal cập nhật tình trạng sách -->
 }
 
 <!-- ================= SCRIPTS ================= -->
 @section Scripts {
+    
     <script>
         $(document).ready(function() {
-            // ==========================================
-            // 1. LOGIC ẢNH THÊM / SỬA (GIỮ NGUYÊN TỪ CŨ)
-            // ==========================================
+            // chỉnh sửa ảnh
             $('#imagePreviewContainer').click(function() { $('#imageInput').click(); });
             $('#imageInput').change(function() {
                 const file = this.files[0];
@@ -170,7 +169,6 @@
                 }
             });
 
-            // Upload ảnh preview cho Edit form
             $('#editImagePreviewContainer').click(function() { $('#editImageInput').click(); });
             $('#editImageInput').change(function() {
                 const file = this.files[0];
@@ -181,9 +179,7 @@
                 }
             });
 
-            // ==========================================
-            // 2. LOAD ĐỘNG TẦNG (TIER) KHI CHỌN KỆ
-            // ==========================================
+            // lấy thông tin kệ tầng
             $('#shelfSelect').change(function() {
                 var shelfId = $(this).val();
                 var tierSelect = $('#tierSelect');
@@ -206,7 +202,6 @@
                 }
             });
 
-            // Logic đổi tầng trong form Edit
             $('#editShelfSelect').change(function() {
                 var shelfId = $(this).val();
                 var tierSelect = $('#editTierSelect');
@@ -221,9 +216,7 @@
                 }
             });
 
-            // ==========================================
-            // 3. XỬ LÝ SUBMIT AJAX (THÊM / SỬA)
-            // ==========================================
+            // thêm sách
             $('#addBookForm').submit(function(e) {
                 e.preventDefault();
                 var formData = new FormData(this);
@@ -239,7 +232,7 @@
                     }
                 });
             });
-
+            // sửa sách
             $('#editBookForm').submit(function(e) {
                 e.preventDefault();
                 var formData = new FormData(this);
@@ -256,9 +249,7 @@
                 });
             });
 
-            // ==========================================
-            // 4. KHI CLICK VÀO SÁCH -> TẢI DỮ LIỆU & MỞ MODAL INFO
-            // ==========================================
+            // click vào card mở modal thông tin sách
             $('.book-item').click(function() {
                 var bookId = $(this).data('id');
                 $.get('/Home/GetBookDetails', { id: bookId }, function(data) {
@@ -276,10 +267,8 @@
                     var finalImg = data.coverImage ? data.coverImage : '/images/no-cover.png';
                     $('#infoImage').attr('src', finalImg);
 
-                    // Gắn ID vào nút Sửa của Admin
                     $('#btnOpenEdit').data('id', data.id);
 
-                    // Nút Ẩn/Hiện của Admin
                     var btnToggle = $('#btnToggleVisibility');
                     btnToggle.data('id', data.id);
                     if (data.isActive) {
@@ -291,8 +280,7 @@
                     $('#infoBookModal').modal('show');
                 });
             });
-
-            // Sự kiện Ẩn / Hiện sách của Admin
+            //button ẩn hiện sách trong modal thông tin sách
             $('#btnToggleVisibility').off('click').on('click', function() {
                 var bookId = $(this).data('id');
                 var action = $(this).data('action');
@@ -309,8 +297,7 @@
                     });
                 }
             });
-
-            // Chuyển từ Modal Info -> Modal Edit
+            //button mở modal chỉnh sửa sách
             $('#btnOpenEdit').click(function() {
                 var bookId = $(this).data('id');
                 $('#infoBookModal').modal('hide');
@@ -344,43 +331,25 @@
             });
         });
 
-        // ==========================================
-        // 5. CÁC HÀM XỬ LÝ TRỰC TIẾP TỪ GIAO DIỆN (Nằm ngoài $(document).ready)
-        // ==========================================
-
-        // Hàm gọi từ Info Modal để lấy thông tin đưa vào Giỏ hàng
-        function addToCartFromModal() {
-            var bookId = $('#infoBookId').val();
-            var bookTitle = $('#infoTitle').text();
-            var bookImage = $('#infoImage').attr('src');
-            addToCart(bookId, bookTitle, bookImage);
-        }
-
-        // Hàm mở Modal Cập nhật tình trạng của Thủ thư
+        //hàm mở modal update status
         function openUpdateStatusModal() {
             var bookId = $('#infoBookId').val();
             var currentStatus = $('#infoStatus').text().trim();
-
             $('#updateStatusBookId').val(bookId);
             $('#bookStatusSelect').val(currentStatus);
-
             var updateModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
             updateModal.show();
         }
-
-        
-        // Hàm lưu Tình trạng của Thủ thư
+        //hàm lưu status trong modal
         function saveBookStatus() {
             var bookId = $('#updateStatusBookId').val();
             var newStatus = $('#bookStatusSelect').val();
 
-            // BỔ SUNG: Kiểm tra xem thủ thư đã chọn tình trạng chưa
             if (!newStatus || newStatus.trim() === "") {
                 alert("Vui lòng chọn tình trạng sách trước khi lưu!");
-                return; // Dừng tiến trình, không gửi lên server
+                return; 
             }
 
-            // Nếu đã chọn thì mới gửi AJAX
             $.post('/Home/UpdateStatus', { id: bookId, status: newStatus }, function(response) {
                 if (response.success) {
                     alert("Cập nhật tình trạng thành công!");
@@ -392,58 +361,32 @@
                 }
             });
         }
-        // ==========================================
-        // LOGIC GIỎ HÀNG BẰNG DATABASE (AJAX)
-        // ==========================================
 
-        @* Kiểm tra xem người dùng đã đăng nhập chưa VÀ có đúng Role không *@
-        @if (User.Identity!.IsAuthenticated && (User.IsInRole("Librarian") || User.IsInRole("Reader")))
-        {
-            <script>
-                $(document).ready(function() {
-                    // Chỉ Librarian và Reader mới chạy AJAX này
-                    $.get('/Home/GetCartItemCount', function (count) {
-                        updateCartBadge(count);
-                    }).fail(function() {
-                        // Bắt lỗi âm thầm nếu có trục trặc mạng để không báo đỏ console
-                        console.warn("Không thể lấy số lượng giỏ hàng.");
-                    });
+    </script>
+
+    <!-- THẺ SCRIPT 2: Logic giỏ hàng (Chỉ load nếu đúng Role) -->
+    @if (User.Identity!.IsAuthenticated && (User.IsInRole("Librarian") || User.IsInRole("Reader")))
+    {
+        <script>
+            @* $(document).ready(function() {
+                $.get('/Home/GetCartItemCount', function (count) {
+                    updateCartBadge(count);
+                }).fail(function() {
+                    console.warn("Không thể lấy số lượng giỏ hàng.");
                 });
-
-                // Hàm cập nhật số lượng và ẩn/hiện badge thông minh
-                function updateCartBadge(count) {
-                    let badge = $('#cartItemCountBadge');
-                    if (badge.length > 0) {
-                        badge.text(count);
-                        if (count > 0) {
-                            badge.css('display', 'inline-block');
-                        } else {
-                            badge.css('display', 'none');
-                        }
+            }); *@
+            @* hàm này *@
+            @* function updateCartBadge(count) {
+                let badge = $('#cartItemCountBadge');
+                if (badge.length > 0) {
+                    badge.text(count);
+                    if (count > 0) {
+                        badge.css('display', 'inline-block');
+                    } else {
+                        badge.css('display', 'none');
                     }
                 }
-            </script>
-        }
-
-        // 2. Hàm khi người dùng bấm nút "Thêm vào giỏ hàng"
-        function addToCart(bookId) {
-            // Gửi ID sách lên Server
-            $.post('/Home/AddToCartDb', { bookId: bookId }, function(res) {
-                if (res.success) {
-                    alert("Đã thêm vào giỏ hàng!");
-                    updateCartBadge(res.newCount); // Cập nhật lại vòng tròn đỏ ngay lập tức
-                } else {
-                    alert(res.message); // Báo lỗi nếu đã đủ 2 cuốn hoặc bị trùng
-                }
-            }).fail(function() {
-                alert("Lỗi kết nối đến máy chủ.");
-            });
-        }
-
-        // 3. Nút bấm trong Modal Thông tin sách
-        function addToCartFromModal() {
-            var bookId = $('#infoBookId').val(); // Chỉ cần lấy ID sách là đủ
-            addToCart(bookId);
-        }
-    </script>
+            } *@
+        </script>
+    }
 }

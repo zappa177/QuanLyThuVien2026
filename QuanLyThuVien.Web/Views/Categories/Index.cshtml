@@ -113,7 +113,7 @@
             myModal.show();
         }
 
-        // Xử lý submit form qua Ajax
+        // Xử lý submit form thêm sửa trong modal
         $('#categoryForm').submit(function (e) {
             e.preventDefault();
             var formData = $(this).serialize();
@@ -127,7 +127,7 @@
             });
         });
 
-        // Xử lý ẩn/hiện thể loại qua Ajax
+        // Xử lý ẩn/hiện thể loại trong categories/index
         function toggleStatus(id) {
             $.post('/Categories/ToggleCategoryStatus', { id: id }, function (response) {
                 if (response.success) {

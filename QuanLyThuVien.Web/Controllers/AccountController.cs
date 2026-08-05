@@ -20,7 +20,6 @@ namespace QuanLyThuVien.Web.Controllers
 
         // GET: /Account/Login
         [Route("/")]
-        [Route("dang-nhap")]
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
@@ -30,43 +29,39 @@ namespace QuanLyThuVien.Web.Controllers
 
         // POST: /Account/Login
         [Route("/")]
-        [Route("dang-nhap")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
 
-            // 1. Kiểm tra xem người dùng đã nhập đầy đủ ô dữ liệu chưa
+            // kiểm tra dữ liệu đầu vào 
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
-            // 2. Gọi AuthService kiểm tra tài khoản (nhận về SignInResult)
+            //kiểm tra tài khoản
             var result = await _authService.LoginAsync(model.Username, model.Password);
 
-            // 3. NẾU THÀNH CÔNG -> Chuyển hướng sang Trang chủ (hoặc link trang trước đó)
+            //thành công -> chuyển hướng về trang Home
             if (result.Succeeded)
             {
-                // 1. Nếu có returnUrl (người dùng đang xem dở trang nào đó bị văng ra), thì trả về trang đó
+                // trở về trang trước đó 
                 if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                 {
                     return Redirect(returnUrl);
                 }
 
-                // 2. KHÔNG CẦN CHIA ROLE Ở ĐÂY. 
-                // Dù là Admin, Thủ thư hay Khách, tất cả đều đẩy hết về HomeController!
                 return RedirectToAction("Index", "Home");
             }
 
-            // 4. NẾU THẤT BẠI -> Thêm câu lỗi vào ModelState để đẩy ra màn hình View
+            // nếu lỗi thì trả về thông tin lỗi
             ModelState.AddModelError(string.Empty, "Sai tên đăng nhập hoặc mật khẩu");
             return View(model);
         }
 
         // POST: /Account/Logout
-        [Route("dang-xuat")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
@@ -74,15 +69,16 @@ namespace QuanLyThuVien.Web.Controllers
             await _authService.LogoutAsync();
             return RedirectToAction("Login", "Account");
         }
+
+        //Đổi mật khẩu
         [Authorize]
-        // 1. Hiển thị form
         [HttpGet]
         public IActionResult ChangePassword()
         {
             return View();
         }
 
-        // 2. Xử lý khi nhấn nút "Đổi mật khẩu"
+        //xử lý đổi mật khẩu
         [Authorize]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -110,7 +106,7 @@ namespace QuanLyThuVien.Web.Controllers
                 return View();
             }
 
-            // Nếu mật khẩu cũ sai, hoặc mật khẩu mới quá yếu, Identity sẽ báo lỗi tại đây
+            // Nếu mật khẩu cũ sai Identity sẽ báo lỗi tại đây
             foreach (var error in result.Errors)
             {
                 ModelState.AddModelError(string.Empty, error.Description);
@@ -118,7 +114,9 @@ namespace QuanLyThuVien.Web.Controllers
 
             return View(model);
         }
-        // Thêm vào trong AccountController.cs
+
+
+        //khi truy cập vào trang không được phần quyền thì chuyển sang đây
         [AllowAnonymous]
         public IActionResult AccessDenied()
         {
