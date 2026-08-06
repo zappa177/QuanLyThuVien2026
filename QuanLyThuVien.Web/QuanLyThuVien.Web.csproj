@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>b952df70-cd08-4617-b29d-10efa00e60b3</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -34,6 +35,15 @@
 
   <ItemGroup>
     <Folder Include="wwwroot\images\books\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\Rotativa\wkhtmltoimage.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\Rotativa\wkhtmltopdf.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

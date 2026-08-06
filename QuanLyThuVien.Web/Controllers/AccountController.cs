@@ -23,6 +23,10 @@ namespace QuanLyThuVien.Web.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
+            if (User.Identity != null && User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
