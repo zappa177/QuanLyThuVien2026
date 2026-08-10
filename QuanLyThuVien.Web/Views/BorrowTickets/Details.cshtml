@@ -1,0 +1,263 @@
+﻿@model QuanLyThuVien.Web.Entities.BorrowTickets
+@using QuanLyThuVien.Web.Enums
+
+@{
+    ViewData["Title"] = "Chi tiết phiếu mượn #" + Model.Id;
+    bool isStaff = ViewBag.IsStaff;
+    bool isFullyAssigned = Model.TicketDetails.All(d => d.BookCopyId != null);
+}
+
+<div class="container py-4" style="max-width: 900px;">
+    <a asp-action="Index" class="btn btn-outline-dark rounded-0 mb-3">
+        Quay lại danh sách
+    </a>
+
+    <div class="card border rounded-0">
+        <div class="card-header bg-light py-3 rounded-0 border-bottom">
+            <h4 class="mb-0 fw-bold">Chi tiết phiếu mượn #@Model.Id</h4>
+        </div>
+
+        <div class="card-body p-4">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="ticketId" value="@Model.Id" />
+
+            <div class="row mb-4 bg-light p-3 border">
+                <div class="col-md-6">
+                    <p class="mb-2">Người mượn: <strong>@(Model.User?.UserName ?? Model.User?.FullName)</strong></p>
+                    <p class="mb-2">Lớp / Chức vụ: <strong>@(Model.User?.Position ?? "Không rõ")</strong></p>
+                </div>
+                <div class="col-md-6">
+                    <p class="mb-2">Tình trạng: <strong>@Model.Status</strong></p>
+                    <p class="mb-2">Ngày mượn: <strong>@Model.BorrowDate.ToString("dd/MM/yyyy HH:mm")</strong></p>
+                    <p class="mb-2">Hạn trả: <strong>@Model.ExpectedReturnDate.ToString("dd/MM/yyyy")</strong></p>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mb-3 border-bottom pb-2">Danh sách sách yêu cầu</h5>
+            @{
+                var groupedDetails = Model.TicketDetails.GroupBy(d => d.BookId).ToList();
+            }
+
+            <div class="mb-4">
+                @foreach (var group in groupedDetails)
+                {
+                    var book = group.First().Book;
+                    int requiredQty = group.Count();
+                    bool groupFullyAssigned = group.All(d => d.BookCopyId != null);
+
+                    <div class="d-flex align-items-start mb-4 p-3 border bg-white book-group" data-book-id="@book.Id" data-qty="@requiredQty">
+                        <img src="@(string.IsNullOrEmpty(book?.CoverImage) ? "/images/no-cover.png" : book.CoverImage)"
+                             class="me-3 border" style="width: 80px; height: 110px; object-fit: cover;">
+
+                        <div class="flex-grow-1">
+                            <h5 class="mb-1 fw-bold">@book?.Title</h5>
+                            <div class="mb-2">Số lượng: @requiredQty cuốn</div>
+
+                            @if (Model.Status == BorrowStatus.Pending)
+                            {
+                                <div class="text-muted mb-2">Đang chờ kiểm tra tồn kho...</div>
+                                @if (isStaff)
+                                {
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-0 btn-remove-book" data-book-id="@book.Id" data-remove-all="false">Giảm 1 cuốn</button>
+                                        <button type="button" class="btn btn-sm btn-outline-dark rounded-0 btn-remove-book ms-1" data-book-id="@book.Id" data-remove-all="true">Xóa hết sách này</button>
+                                    </div>
+                                }
+                            }
+                            else if (Model.Status == BorrowStatus.Accepted && isStaff)
+                            {
+                                if (!groupFullyAssigned)
+                                {
+                                    <div class="mt-3 bg-light p-3 border">
+                                        <label class="fw-bold mb-1">Quét mã vật lý vào kho:</label>
+                                        <input type="text" class="form-control rounded-0 issue-scanner mb-2" placeholder="Tít mã vào đây rồi ấn Enter...">
+                                        <label class="fw-bold" style="font-size:0.85rem;">Mã đã quét (<span class="issue-count">0</span>/@requiredQty):</label>
+                                        <textarea class="form-control rounded-0 issue-codes-result" rows="2" readonly></textarea>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="mt-2">
+                                        <div class="fw-bold mb-1">Sách đã đóng gói:</div>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach (var detail in group)
+                                            {
+                                                <span class="border p-1 px-2 bg-light">@detail.BookCopy?.CopyCode</span>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            }
+                            else if (Model.Status == BorrowStatus.Borrowing || Model.Status == BorrowStatus.Returned)
+                            {
+                                <div class="mt-2">
+                                    <div class="fw-bold mb-1">Mã vật lý đang mượn:</div>
+                                    <div class="d-flex flex-wrap gap-2 return-badge-container">
+                                        @foreach (var detail in group)
+                                        {
+                                            <span class="border p-1 px-2 bg-light return-badge" data-code="@detail.BookCopy?.CopyCode.ToUpper()">@detail.BookCopy?.CopyCode</span>
+                                        }
+                                    </div>
+                                </div>
+                                if (Model.Status == BorrowStatus.Borrowing && isStaff)
+                                {
+                                    <div class="mt-3"><input type="text" class="form-control rounded-0 return-scanner" placeholder="Quét thu hồi sách khách trả vào đây..."></div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            @if (isStaff)
+            {
+                <div class="bg-light p-3 border text-center">
+                    @if (Model.Status == BorrowStatus.Pending)
+                    {
+                        <button type="button" class="btn btn-dark rounded-0 px-4 py-2" id="btnCheckInventory">Kiểm tra khả dụng</button>
+                        <button type="button" class="btn btn-secondary rounded-0 px-5 py-2" id="btnApproveTicket" style="display:none;">Duyệt phiếu</button>
+                    }
+                    else if (Model.Status == BorrowStatus.Accepted)
+                    {
+                        if (!isFullyAssigned)
+                        {
+                            <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnSaveScanned" disabled>Lưu mã đã quét</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnConfirmHandover">Khách đã nhận sách</button>
+                        }
+                    }
+                    else if (Model.Status == BorrowStatus.Borrowing)
+                    {
+                        <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnConfirmReturn" disabled>Hoàn tất Thu Hồi</button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            var ticketId = $('#ticketId').val();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            // 1. KIỂM TRA TỒN KHO & DUYỆT
+            $('#btnCheckInventory').click(function() {
+                var btn = $(this);
+                btn.prop('disabled', true).text('Đang kiểm tra...');
+                $.post('/BorrowTickets/CheckInventory', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) {
+                        alert(res.message);
+                        btn.hide();
+                        $('#btnApproveTicket').show();
+                    } else {
+                        alert(res.message);
+                        btn.prop('disabled', false).text('Kiểm tra khả dụng');
+                    }
+                });
+            });
+
+            $('#btnApproveTicket').click(function() {
+                $(this).prop('disabled', true).text('Đang xử lý...');
+                $.post('/BorrowTickets/ApproveTicket', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) { alert("Duyệt phiếu thành công!"); location.reload(); }
+                });
+            });
+
+            // XÓA BỚT SÁCH (KHI PENDING LỖI TỒN KHO)
+            $('.btn-remove-book').click(function() {
+                var bookId = $(this).data('book-id');
+                var removeAll = $(this).data('remove-all');
+                if (!confirm("Xác nhận xóa/giảm cuốn này khỏi phiếu?")) return;
+                $.post('/BorrowTickets/RemoveBookFromTicket', { ticketId: ticketId, bookId: bookId, removeAll: removeAll, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) { if (res.isCanceled) alert(res.message); location.reload(); }
+                });
+            });
+
+            // 2. QUÉT MÃ GIAO SÁCH
+            $('.issue-scanner').keypress(function(e) {
+                if (e.which == 13) {
+                    e.preventDefault();
+                    var input = $(this);
+                    var group = input.closest('.book-group');
+                    var bookId = group.data('book-id');
+                    var reqQty = parseInt(group.data('qty'));
+                    var barcode = input.val().trim().toUpperCase();
+                    input.val('');
+                    if (barcode === "") return;
+
+                    var textarea = group.find('.issue-codes-result');
+                    var currentCodes = textarea.val() ? textarea.val().split(',').map(s => s.trim()) : [];
+
+                    if (currentCodes.length >= reqQty) { alert("Đã quét đủ sách này!"); return; }
+                    if (currentCodes.includes(barcode)) { alert("Trùng mã!"); return; }
+
+                    $.post('/BorrowTickets/ValidateBarcode', { ticketId: ticketId, bookId: bookId, barcode: barcode, __RequestVerificationToken: token }, function(res) {
+                        if (res.isValid) {
+                            currentCodes.push(barcode);
+                            textarea.val(currentCodes.join(', '));
+                            group.find('.issue-count').text(currentCodes.length);
+                            if (currentCodes.length === reqQty) input.prop('disabled', true).attr('placeholder', 'Đã quét xong!');
+
+                            var allDone = true;
+                            $('.book-group').each(function() {
+                                if (($(this).find('.issue-codes-result').val() ? $(this).find('.issue-codes-result').val().split(',').filter(s => s !== "").length : 0) < parseInt($(this).data('qty'))) allDone = false;
+                            });
+                            $('#btnSaveScanned').prop('disabled', !allDone);
+                        } else { alert(res.message); }
+                    });
+                }
+            });
+
+            // LƯU MÃ VÀ ĐƯA SÁCH VÀO ONHOLD
+            $('#btnSaveScanned').click(function() {
+                var allScannedCodes = [];
+                $('.issue-codes-result').each(function() {
+                    allScannedCodes = allScannedCodes.concat($(this).val().split(',').map(s => s.trim()).filter(s => s !== ""));
+                });
+                $(this).prop('disabled', true).text('Đang lưu...');
+                $.post('/BorrowTickets/SaveScannedCodes', { ticketId: ticketId, scannedCodes: allScannedCodes, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) { alert("Lưu mã thành công!"); location.reload(); }
+                });
+            });
+
+            // 3. GIAO SÁCH CHO KHÁCH
+            $('#btnConfirmHandover').click(function() {
+                $(this).prop('disabled', true).text('Đang xử lý...');
+                $.post('/BorrowTickets/ConfirmHandover', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) { alert("Sách đã được giao cho khách!"); location.reload(); }
+                });
+            });
+
+            // 4. QUÉT MÃ THU HỒI
+            $('.return-scanner').keypress(function(e) {
+                if (e.which == 13) {
+                    e.preventDefault();
+                    var barcode = $(this).val().trim().toUpperCase();
+                    $(this).val('');
+                    if (barcode === "") return;
+
+                    var badge = $(this).closest('.book-group').find('.return-badge[data-code="' + barcode + '"]');
+                    if (badge.length === 0) { alert("Mã này không đúng!"); return; }
+                    if (badge.hasClass('text-decoration-line-through')) { alert("Đã nhận lại mã này rồi!"); return; }
+
+                    badge.addClass('text-decoration-line-through bg-secondary text-white');
+                    if ($('.return-badge:not(.text-decoration-line-through)').length === 0) {
+                        $('#btnConfirmReturn').prop('disabled', false);
+                        alert("Tuyệt vời! Khách đã trả đủ sách.");
+                    }
+                }
+            });
+
+            $('#btnConfirmReturn').click(function() {
+                $(this).prop('disabled', true).text('Đang xử lý...');
+                $.post('/BorrowTickets/ConfirmReturnAll', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
+                    if (res.success) { alert("Thu hồi thành công!"); location.reload(); }
+                });
+            });
+        });
+    </script>
+}

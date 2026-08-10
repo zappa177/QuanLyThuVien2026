@@ -3,12 +3,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Application.Interfaces.IServices;
-using QuanLyThuVien.Domain.Entities;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Domain.Enums;
-using QuanLyThuVien.Infrastructure.Data;
-using QuanLyThuVien.Web.EnumExtensions;
+using QuanLyThuVien.Web.Common;
+using QuanLyThuVien.Web.Data;
+using QuanLyThuVien.Web.Entities;
+using QuanLyThuVien.Web.Entities.Identity;
+using QuanLyThuVien.Web.Enums;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -16,45 +15,66 @@ namespace QuanLyThuVien.Web.Controllers
     [Authorize] // Bắt buộc đăng nhập mới được vào trang chủ
     public class HomeController : Controller
     {
-        private readonly IBookService _bookService;
-        private readonly ICategoryService _categoryService;
-        private readonly IShelfService _shelfService;
-        private readonly IShelfTierService _shelfTierService;
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly IConfiguration _configuration;
-        public HomeController(IBookService bookService, ICategoryService categoryService, IShelfService shelfService, IShelfTierService shelfTierService, ApplicationDbContext dbContext, UserManager<ApplicationUser> userManager, IConfiguration configuration)
+
+        public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
         {
-            _bookService = bookService;
-            _categoryService = categoryService;
-            _shelfService = shelfService;
-            _shelfTierService = shelfTierService;
-            _context = dbContext;
+            _context = context;
             _userManager = userManager;
-            _configuration = configuration;
         }
 
-        //trang chủ index là trang hiển thị sách , có phân trang, tìm kiếm, lọc, sắp xếp
+        // Trang chủ Index hiển thị danh mục tựa sách (Có phân trang, tìm kiếm, lọc, sắp xếp)
         [HttpGet]
         public async Task<IActionResult> Index(
             string searchTitle, string searchAuthor, string searchISBN,
             int? categoryId, int? publishYear,
             string sortBy = "PublishYear", int pageNumber = 1)
         {
-            int pageSize = 9; // Số lượng sách hiển thị trên mỗi trang tạo grid 3x3
+            int pageSize = 9;
+            bool? isActiveFilter = User.IsInRole("Admin") ? null : true;
 
-            //phân biệc role để hiện sách 
-            bool? isActiveFilter = User.IsInRole("Admin") ? null : true; //nếu là admin thì hiện tất cả sách, còn lại chỉ hiện sách đang hoạt động
-            bool onlyAvailable = User.IsInRole("Admin") || User.IsInRole("Librarian") ? false : true; //nếu là admin hoặc thủ thư thì hiện tất cả sách, còn lại chỉ hiện sách đang sẵn sàng
+            // 1. Tạo Query trực tiếp từ DbContext
+            var query = _context.Books
+                 .Include(b => b.Category)
+                 .Include(b => b.BookCopies)
+                 .AsQueryable();
 
-            // Lấy dữ liệu sách phân trang từ Service
-            var pagedBooks = await _bookService.GetPagedBooksAsync(searchTitle, searchAuthor, searchISBN, publishYear, pageNumber, pageSize, categoryId, sortBy, isActiveFilter, onlyAvailable);
+            if (isActiveFilter.HasValue)
+                query = query.Where(b => b.IsActive == isActiveFilter.Value);
 
-            // Lấy dữ liệu cho Dropdown
-            var categories = await _categoryService.GetAllCategoriesAsync() ?? new List<Categories>();
-            var shelves = await _shelfService.GetShelvesWithTiersAsync() ?? new List<Shelves>();
+            if (!string.IsNullOrWhiteSpace(searchTitle))
+                query = query.Where(b => b.Title.ToLower().Contains(searchTitle.ToLower()));
 
-            // Đổ dữ liệu vào ViewModel
+            if (!string.IsNullOrWhiteSpace(searchAuthor))
+                query = query.Where(b => b.Author.ToLower().Contains(searchAuthor.ToLower()));
+
+            if (!string.IsNullOrWhiteSpace(searchISBN))
+                query = query.Where(b => b.ISBN != null && b.ISBN.ToLower().Contains(searchISBN.ToLower()));
+
+            if (publishYear.HasValue)
+                query = query.Where(b => b.PublishYear == publishYear.Value);
+
+            if (categoryId.HasValue && categoryId.Value > 0)
+                query = query.Where(b => b.CategoryId == categoryId.Value);
+
+            int totalCount = await query.CountAsync();
+
+            query = sortBy switch
+            {
+                "year_desc" => query.OrderByDescending(b => b.PublishYear),
+                "year_asc" => query.OrderBy(b => b.PublishYear),
+                "title_desc" => query.OrderByDescending(b => b.Title),
+                "title_asc" => query.OrderBy(b => b.Title),
+                _ => query.OrderByDescending(b => b.CreatedAt)
+            };
+
+            var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+            var pagedBooks = new PagedResult<Books>(items, totalCount, pageNumber, pageSize);
+
+            // 2. Load Thể loại
+            var categories = await _context.Categories.Where(c => c.IsActive).ToListAsync();
+
             var model = new HomeIndexViewModel
             {
                 Books = pagedBooks,
@@ -68,45 +88,59 @@ namespace QuanLyThuVien.Web.Controllers
             };
 
             ViewBag.Categories = new SelectList(categories, "Id", "Name");
-            ViewBag.Shelves = new SelectList(shelves, "Id", "Name");
-
             return View(model);
         }
 
-        //lấy chi tiết sách
+        // lấy chi tiết sách
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetBookDetails(int id)
         {
-            var book = await _bookService.GetBookByIdAsync(id);
+            var book = await _context.Books
+                .Include(b => b.Category)
+                .Include(b => b.BookCopies)
+                    .ThenInclude(bc => bc.ShelfTier)
+                        .ThenInclude(st => st!.Shelf)
+                .FirstOrDefaultAsync(b => b.Id == id);
+
             if (book == null) return NotFound();
 
-            var data = new
+            // ... (Logic đếm sách giữ nguyên như cũ, chỉ là giờ gọi trên biến book) ...
+            int totalCopies = book.BookCopies?.Count ?? 0;
+            var availableCopies = book.BookCopies?.Where(bc =>
+                bc.Status == BookCopyStatus.Available && bc.IsActive && !bc.IsReferenceOnly).ToList();
+            int availableCount = availableCopies?.Count ?? 0;
+
+            string suggestedLocation = "Chưa xếp kệ";
+            if (availableCopies != null && availableCopies.Any())
+            {
+                var firstAvailable = availableCopies.First();
+                if (firstAvailable.ShelfTier?.Shelf != null)
+                    suggestedLocation = $"{firstAvailable.ShelfTier.Shelf.Name} - {firstAvailable.ShelfTier.TierName}";
+            }
+
+            return Json(new
             {
                 id = book.Id,
                 title = book.Title,
                 categoryId = book.CategoryId,
                 categoryName = book.Category?.Name,
-                shelfId = book.ShelfTier?.ShelfId,
-                shelfName = book.ShelfTier?.Shelf?.Name,
-                tierId = book.ShelfTierId,
-                tierName = book.ShelfTier?.TierName,
                 isbn = book.ISBN,
                 author = book.Author,
                 publishYear = book.PublishYear,
                 publisher = book.Publisher,
-                status = (int)book.Status,
-                statusName = book.Status.ToVietnamese(), // Chuyển đổi Enum ra string
-                coverImage = book.CoverImage,
-                isActive = book.IsActive
-            };
-            return Json(data);
+                coverImage = string.IsNullOrEmpty(book.CoverImage) ? "/images/no-cover.png" : book.CoverImage,
+                isActive = book.IsActive,
+                totalCopies = totalCopies,
+                availableCount = availableCount,
+                suggestedLocation = suggestedLocation
+            });
         }
 
-        // Cập nhật tình trạng sách (chỉ dành cho thủ thư)
+        // Cập nhật tình trạng của một Bản sao vật lý (BookCopy) cụ thể (chỉ dành cho thủ thư hoặc admin)
         [HttpPost]
-        [Authorize(Roles = "Librarian")]
-        public async Task<IActionResult> UpdateStatus(int id, string status)
+        [Authorize(Roles = "Librarian, Admin")]
+        public async Task<IActionResult> UpdateCopyStatus(int copyId, string status)
         {
             try
             {
@@ -114,42 +148,47 @@ namespace QuanLyThuVien.Web.Controllers
                 {
                     return Json(new { success = false, message = "Vui lòng chọn tình trạng sách hợp lệ." });
                 }
-                var book = await _bookService.GetBookByIdAsync(id);
-                if (book == null) return Json(new { success = false, message = "Không tìm thấy sách." });
 
+                // Tìm kiếm bản sao vật lý (BookCopy) theo ID
+                var bookCopy = await _context.BookCopies.FindAsync(copyId);
+                if (bookCopy == null)
+                    return Json(new { success = false, message = "Không tìm thấy bản sao vật lý của sách." });
 
-                int enumValue = 0;
+                BookCopyStatus newStatus;
 
+                // Chuyển đổi chuỗi tiếng Việt hoặc enum sang giá trị BookStatus thực tế
                 switch (status.Trim())
                 {
                     case "Sẵn sàng":
-                        enumValue = (int)BookStatus.Available; // enum bookstatus
+                    case "Available":
+                        newStatus = BookCopyStatus.Available;
                         break;
                     case "Đang mượn":
-                        enumValue = (int)BookStatus.Borrowed;
+                    case "Borrowed":
+                        newStatus = BookCopyStatus.Borrowed;
                         break;
                     case "Hư hỏng":
-                        enumValue = (int)BookStatus.Damaged;
+                    case "Damaged":
+                        newStatus = BookCopyStatus.Damaged;
                         break;
                     case "Mất":
-                        enumValue = (int)BookStatus.Lost;
+                    case "Lost":
+                        newStatus = BookCopyStatus.Lost;
                         break;
                     default:
-                        if (Enum.TryParse(book.Status.GetType(), status, out var parsed))
+                        if (!Enum.TryParse<BookCopyStatus>(status, true, out newStatus))
                         {
-                            book.Status = (dynamic)parsed;
-                            await _bookService.UpdateBookAsync(book);
-                            return Json(new { success = true });
+                            return Json(new { success = false, message = "Tình trạng sách không hợp lệ." });
                         }
-                        return Json(new { success = false, message = "Tình trạng sách không hợp lệ." });
+                        break;
                 }
 
-                // Chuyển đổi số int thành enum và gán lại cho book.Status
-                book.Status = (dynamic)Enum.ToObject(book.Status.GetType(), enumValue);
+                // Cập nhật trạng thái cho bản sao vật lý
+                bookCopy.Status = newStatus;
+                _context.BookCopies.Update(bookCopy);
+                await _context.SaveChangesAsync();
 
-                await _bookService.UpdateBookAsync(book);
-
-                return Json(new { success = true });
+                return Json(new { success = true, message = "Cập nhật tình trạng bản sao thành công!" });
             }
             catch (Exception ex)
             {
@@ -159,126 +198,28 @@ namespace QuanLyThuVien.Web.Controllers
 
 
         //admin lấy danh sách tier theo shelfId để hiển thị trong dropdown khi tạo hoặc chỉnh sửa sách , tạo chỉnh sửa kệ
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Librarian")]
         [HttpGet]
         public async Task<IActionResult> GetAvailableTiers(int shelfId)
         {
-            var tiers = await _shelfTierService.GetAvailableTiersByShelfIdAsync(shelfId);
-            var result = tiers.Select(t => new { id = t.Id, tierName = t.TierName });
-            return Json(result);
+            // Viết lại logic GetAvailableTiersByShelfIdAsync trực tiếp
+            var tiers = await _context.ShelfTiers.Where(t => t.ShelfId == shelfId && t.IsActive).ToListAsync();
+            var availableTiers = new List<ShelfTiers>();
+
+            foreach (var tier in tiers)
+            {
+                int currentCopiesCount = await _context.BookCopies.CountAsync(bc => bc.ShelfTierId == tier.Id && bc.IsActive);
+                if (currentCopiesCount < tier.Capacity)
+                {
+                    availableTiers.Add(tier);
+                }
+            }
+
+            return Json(availableTiers.Select(t => new { id = t.Id, tierName = t.TierName }));
         }
-        //****************************************************************************
-        //
-        // Hàm phụ trợ để xử lý upload ảnh lên Azure gọn gàng hơn
-        ////////////////////private async Task<string> UploadImageToAzureAsync(IFormFile file)
-        ////////////////////{
-        ////////////////////    string connectionString = _configuration.GetConnectionString("AzureStorage");
-        ////////////////////    string containerName = _configuration["AzureBlob:ContainerName"];
 
-        ////////////////////    var blobServiceClient = new BlobServiceClient(connectionString);
-        ////////////////////    var blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
 
-        ////////////////////    // Đảm bảo container tồn tại
-        ////////////////////    await blobContainerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
-
-        ////////////////////    var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
-        ////////////////////    var blobClient = blobContainerClient.GetBlobClient(fileName);
-
-        ////////////////////    using (var stream = file.OpenReadStream())
-        ////////////////////    {
-        ////////////////////        // Upload và set ContentType để trình duyệt hiểu đây là hình ảnh
-        ////////////////////        await blobClient.UploadAsync(stream, new BlobHttpHeaders { ContentType = file.ContentType });
-        ////////////////////    }
-
-        ////////////////////    // Trả về đường dẫn URL tuyệt đối của ảnh trên Azure
-        ////////////////////    return blobClient.Uri.ToString();
-        ////////////////////}
-
-        ////////////////////// --- ADMIN THÊM SÁCH MỚI ---
-        ////////////////////[Authorize(Roles = "Admin")]
-        ////////////////////[HttpPost]
-        ////////////////////[ValidateAntiForgeryToken]
-        ////////////////////public async Task<IActionResult> AddBook([FromForm] CreateBookViewModel model)
-        ////////////////////{
-        ////////////////////    try
-        ////////////////////    {
-        ////////////////////        string imagePath = "/images/no-cover.png"; // Ảnh mặc định nếu không upload
-
-        ////////////////////        if (model.CoverImage != null && model.CoverImage.Length > 0)
-        ////////////////////        {
-        ////////////////////            // Gọi hàm upload lên Azure thay vì lưu local
-        ////////////////////            imagePath = await UploadImageToAzureAsync(model.CoverImage);
-        ////////////////////        }
-
-        ////////////////////        var newBook = new Books
-        ////////////////////        {
-        ////////////////////            Title = model.Title,
-        ////////////////////            CategoryId = model.CategoryId,
-        ////////////////////            ShelfTierId = model.ShelfTierId,
-        ////////////////////            ISBN = model.ISBN,
-        ////////////////////            Author = model.Author,
-        ////////////////////            PublishYear = model.PublishYear,
-        ////////////////////            Publisher = model.Publisher,
-        ////////////////////            Status = model.Status,
-        ////////////////////            CoverImage = imagePath, // Lúc này imagePath là một URL (VD: https://storage.../bookcovers/abc.jpg)
-        ////////////////////            IsActive = true
-        ////////////////////        };
-
-        ////////////////////        var result = await _bookService.CreateBookAsync(newBook);
-        ////////////////////        if (result) return Json(new { success = true });
-
-        ////////////////////        return Json(new { success = false, message = "Không thể lưu sách vào cơ sở dữ liệu." });
-        ////////////////////    }
-        ////////////////////    catch (Exception ex)
-        ////////////////////    {
-        ////////////////////        return Json(new { success = false, message = ex.Message });
-        ////////////////////    }
-        ////////////////////}
-
-        ////////////////////// --- ADMIN CHỈNH SỬA SÁCH ---
-        ////////////////////[Authorize(Roles = "Admin")]
-        ////////////////////[HttpPost]
-        ////////////////////[ValidateAntiForgeryToken]
-        ////////////////////public async Task<IActionResult> EditBook([FromForm] EditBookViewModel model)
-        ////////////////////{
-        ////////////////////    try
-        ////////////////////    {
-        ////////////////////        var existingBook = await _bookService.GetBookByIdAsync(model.Id);
-        ////////////////////        if (existingBook == null)
-        ////////////////////            return Json(new { success = false, message = "Không tìm thấy sách để chỉnh sửa." });
-
-        ////////////////////        string imagePath = model.ExistingCoverImage ?? "/images/no-cover.png";
-
-        ////////////////////        if (model.CoverImage != null && model.CoverImage.Length > 0)
-        ////////////////////        {
-        ////////////////////            // Gọi hàm upload lên Azure
-        ////////////////////            imagePath = await UploadImageToAzureAsync(model.CoverImage);
-
-        ////////////////////            // Tùy chọn nâng cao (Không bắt buộc):
-        ////////////////////            // Nếu sách đã có ảnh cũ trên Azure, bạn có thể viết thêm code xóa ảnh cũ đi để tiết kiệm dung lượng.
-        ////////////////////        }
-
-        ////////////////////        existingBook.Title = model.Title;
-        ////////////////////        existingBook.CategoryId = model.CategoryId;
-        ////////////////////        existingBook.ShelfTierId = model.ShelfTierId;
-        ////////////////////        existingBook.Author = model.Author;
-        ////////////////////        existingBook.PublishYear = model.PublishYear;
-        ////////////////////        existingBook.Publisher = model.Publisher;
-        ////////////////////        existingBook.Status = model.Status;
-        ////////////////////        existingBook.CoverImage = imagePath; // Cập nhật URL mới
-
-        ////////////////////        await _bookService.UpdateBookAsync(existingBook);
-        ////////////////////        return Json(new { success = true });
-        ////////////////////    }
-        ////////////////////    catch (Exception ex)
-        ////////////////////    {
-        ////////////////////        return Json(new { success = false, message = ex.Message });
-        ////////////////////    }
-        ////////////////////}
-        //*****************************************************************************
-        //
-
-        //admin thêm sách mới
+        // admin thêm sách mới
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -299,24 +240,24 @@ namespace QuanLyThuVien.Web.Controllers
                     imagePath = "/images/books/" + fileName;
                 }
 
+                // CHỈ TẠO THÔNG TIN TỰA SÁCH CƠ BẢN
                 var newBook = new Books
                 {
                     Title = model.Title,
                     CategoryId = model.CategoryId,
-                    ShelfTierId = model.ShelfTierId,
                     ISBN = model.ISBN,
                     Author = model.Author,
                     PublishYear = model.PublishYear,
                     Publisher = model.Publisher,
-                    Status = model.Status,
                     CoverImage = imagePath,
                     IsActive = true
                 };
 
-                var result = await _bookService.CreateBookAsync(newBook);
-                if (result) return Json(new { success = true });
+                // Lưu trực tiếp Tựa Sách (Không sinh ra bản sao vật lý nào ở bước này)
+                _context.Books.Add(newBook);
+                await _context.SaveChangesAsync();
 
-                return Json(new { success = false, message = "Không thể lưu sách vào cơ sở dữ liệu." });
+                return Json(new { success = true });
             }
             catch (Exception ex)
             {
@@ -324,7 +265,7 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
-        //admin chỉnh sửa sách
+        // admin chỉnh sửa sách
         [Authorize(Roles = "Admin")]
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -332,9 +273,18 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                var existingBook = await _bookService.GetBookByIdAsync(model.Id);
+                // 1. Dùng _context để tìm sách thay vì _bookService
+                var existingBook = await _context.Books.FindAsync(model.Id);
                 if (existingBook == null)
                     return Json(new { success = false, message = "Không tìm thấy sách để chỉnh sửa." });
+
+                // 2. Logic kiểm tra trùng mã ISBN (Trước đây nằm trong Service, giờ mang lên Controller)
+                if (!string.IsNullOrWhiteSpace(model.ISBN))
+                {
+                    bool isIsbnExist = await _context.Books.AnyAsync(b => b.ISBN == model.ISBN && b.Id != model.Id);
+                    if (isIsbnExist)
+                        return Json(new { success = false, message = "Mã ISBN này đã bị trùng với một sách khác." });
+                }
 
                 string imagePath = model.ExistingCoverImage ?? "/images/no-cover.png";
                 if (model.CoverImage != null && model.CoverImage.Length > 0)
@@ -348,17 +298,19 @@ namespace QuanLyThuVien.Web.Controllers
                     imagePath = "/images/books/" + fileName;
                 }
 
+                // 3. Chỉ cập nhật các thông tin chung của Tựa sách
                 existingBook.Title = model.Title;
                 existingBook.CategoryId = model.CategoryId;
-                existingBook.ShelfTierId = model.ShelfTierId;
                 existingBook.ISBN = model.ISBN;
                 existingBook.Author = model.Author;
                 existingBook.PublishYear = model.PublishYear;
                 existingBook.Publisher = model.Publisher;
-                existingBook.Status = model.Status;
                 existingBook.CoverImage = imagePath;
 
-                await _bookService.UpdateBookAsync(existingBook);
+                // 4. Lưu trực tiếp bằng _context
+                _context.Books.Update(existingBook);
+                await _context.SaveChangesAsync();
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -374,7 +326,15 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                await _bookService.DeleteBookAsync(id);
+                var book = await _context.Books.FindAsync(id);
+                if (book == null)
+                    return Json(new { success = false, message = "Không tìm thấy sách." });
+
+                // Xóa mềm: Chuyển trạng thái IsActive thành false
+                book.IsActive = false;
+                _context.Books.Update(book);
+                await _context.SaveChangesAsync();
+
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -390,10 +350,16 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                bool isRestored = await _bookService.RestoreBookAsync(id);
-                if (isRestored) return Json(new { success = true });
+                var book = await _context.Books.FindAsync(id);
+                if (book == null)
+                    return Json(new { success = false, message = "Không tìm thấy sách hoặc có lỗi xảy ra." });
 
-                return Json(new { success = false, message = "Không tìm thấy sách hoặc có lỗi xảy ra." });
+                // Khôi phục: Chuyển trạng thái IsActive thành true
+                book.IsActive = true;
+                _context.Books.Update(book);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true });
             }
             catch (Exception ex)
             {
@@ -403,72 +369,77 @@ namespace QuanLyThuVien.Web.Controllers
 
 
 
-        //đếm số sách trong giỏ hàng của người dùng hiện tại
-        [Authorize(Roles = "Librarian, Reader")]
+        // đếm số sách trong giỏ hàng của người dùng hiện tại
+        [Authorize(Roles = "Admin, Librarian, Reader")]
         [HttpGet]
         public async Task<IActionResult> GetCartItemCount()
         {
-            // Lấy thông tin tài khoản đang đăng nhập
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Json(0);
 
-            // Tìm hồ sơ mượn sách của tài khoản này
-            var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-            if (reader == null) return Json(0); // Chưa có hồ sơ thì giỏ hàng = 0
+            // Dùng SUM để tính tổng số lượng (Quantity) thay vì đếm số dòng
+            int count = await _context.CartItems
+                .Where(c => c.UserId == user.Id)
+                .SumAsync(c => (int?)c.Quantity) ?? 0;
 
-            // Đếm số lượng sách đang có trong giỏ
-            int count = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
             return Json(count);
         }
 
-        // thêm sách vào giỏ
+        // Thêm sách vào giỏ (Đã cập nhật logic áp dụng LibraryRules chuẩn xác)
         [HttpPost]
-        public async Task<IActionResult> AddToCartDb(int bookId)
+        public async Task<IActionResult> AddToCartDb(int bookId, int quantity = 1)
         {
+            // 1. Kiểm tra đăng nhập
             var user = await _userManager.GetUserAsync(User);
-
-            //lấy thông tin người mượn
-            var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user!.Id);
-
-            // thủ thư thì tự động tạo 1 student code lần đầu 
-            if (reader == null && User.IsInRole("Librarian"))
+            if (user == null)
             {
-                reader = new Readers { ApplicationUserId = user!.Id, StudentCode = "LIB-" + DateTime.Now.ToString("ddMMyyHHmm") };
-                _context.Readers.Add(reader);
-                await _context.SaveChangesAsync();
-            }
-            else if (reader == null)
-            {
-                return Json(new { success = false, message = "Không tìm thấy hồ sơ người mượn." });
+                return Json(new { success = false, message = "Vui lòng đăng nhập để thêm sách vào giỏ hàng!" });
             }
 
+            // 2. Tính TỔNG số lượng cuốn sách hiện đang có trong giỏ hàng (Cộng dồn cột Quantity)
+            // Nếu giỏ hàng trống, SumAsync() đối với kiểu số nguyên nullable có thể lỗi, nên phải gán mặc định về 0
+            int totalBooksInCart = await _context.CartItems
+                .Where(c => c.UserId == user.Id)
+                .Select(c => c.Quantity)
+                .SumAsync();
 
-            // giới hạn 2 cuốn sách 1 giỏ hàng
-            int currentCount = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
-            if (currentCount >= 2)
+
+            // 4. Kiểm tra tính hợp lệ của sách
+            var book = await _context.Books.FindAsync(bookId);
+            if (book == null || !book.IsActive)
             {
-                return Json(new { success = false, message = "Giỏ hàng đã đầy (tối đa 2 cuốn)." });
+                return Json(new { success = false, message = "Sách không tồn tại hoặc đã ngừng hoạt động." });
             }
 
-            //kiểm tra trùng lặp sách
-            bool isExist = await _context.CartItems.AnyAsync(c => c.ReaderId == reader.Id && c.BookId == bookId);
-            if (isExist)
+            // 5. Thêm sách vào giỏ hoặc cập nhật số lượng
+            var cartItem = await _context.CartItems
+                .FirstOrDefaultAsync(c => c.UserId == user.Id && c.BookId == bookId);
+
+            if (cartItem != null)
             {
-                return Json(new { success = false, message = "Sách này đã có trong giỏ hàng!" });
+                cartItem.Quantity += quantity;
+                _context.CartItems.Update(cartItem);
+            }
+            else
+            {
+                cartItem = new CartItems
+                {
+                    UserId = user.Id,
+                    BookId = bookId,
+                    Quantity = quantity
+                };
+                _context.CartItems.Add(cartItem);
             }
 
-            //lưu vào table cartitem (giỏ hàng)
-            var newItem = new CartItems
-            {
-                ReaderId = reader.Id,
-                BookId = bookId
-            };
-
-            _context.CartItems.Add(newItem);
             await _context.SaveChangesAsync();
 
-            // Trả về thành công kèm theo số lượng sách mới nhất
-            return Json(new { success = true, newCount = currentCount + 1 });
+            // 6. Tính tổng số sách trong giỏ để cập nhật Badge hiển thị trên Header
+            int newCount = await _context.CartItems
+                .Where(c => c.UserId == user.Id)
+                .Select(c => c.Quantity)
+                .SumAsync();
+
+            return Json(new { success = true, newCount = newCount });
         }
 
         //trang error

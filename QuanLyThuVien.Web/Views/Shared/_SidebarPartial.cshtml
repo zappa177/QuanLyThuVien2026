@@ -57,8 +57,19 @@
                 </a>
             </li>
         }
+        
+        <!-- 5. Menu: Cài đặt hệ thống cho admin -->
+        @if (User.IsInRole("Admin"))
+        {
+            <li class="nav-item w-100 border-bottom">
+                <a asp-controller="Settings" asp-action="Index"
+                    class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Settings" ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Cài đặt hệ thống</span>
+                </a>
+            </li>
+        }
 
-        <!-- 5. Menu: Đổi mật khẩu -->
+        <!-- 6. Menu: Đổi mật khẩu -->
         <li class="nav-item w-100 border-bottom">
             <a asp-controller="Account" asp-action="ChangePassword"
                class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "ChangePassword" ? "bg-primary text-white" : "text-dark")">

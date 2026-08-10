@@ -28,7 +28,7 @@
             <!-- chỉ hiển thị giỏ hàng nếu là khách || thủ thư -->
             @if (Model.IsReader || Model.IsLibrarian)
             {
-                <a href="javascript:void(0)" onclick="openCartModal()" class="text-white text-decoration-none position-relative" title="Xem giỏ mượn sách">
+                <a asp-controller="Cart" asp-action="Index" class="text-white text-decoration-none position-relative" title="Xem giỏ mượn sách">
                     <i class="fa-solid fa-cart-shopping" style="font-size: 1.8rem;"></i>
 
                     <!--  số lượng item trong cart -->
@@ -42,7 +42,7 @@
 
             <!-- Lời chào tùy theo Role -->
             <!-- d-none d-sm-inline để ẩn lời chào trên màn hình điện thoại siêu nhỏ tránh rớt dòng -->
-            <span class="fs-4 d-none d-sm-inline">Xin chào, @Model.DisplayRole</span>
+            <span class="fs-4 d-none d-sm-inline">Xin chào, @Model.FullName</span>
 
         </div>
     </div>

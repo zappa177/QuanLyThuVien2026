@@ -27,9 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\QuanLyThuVien.Application\QuanLyThuVien.Application.csproj" />
-    <ProjectReference Include="..\QuanLyThuVien.Domain\QuanLyThuVien.Domain.csproj" />
-    <ProjectReference Include="..\QuanLyThuVien.Infrastructure\QuanLyThuVien.Infrastructure.csproj" />
+    <Folder Include="IntegrationTests\" />
+    <Folder Include="UnitTests\" />
   </ItemGroup>
 
 </Project>

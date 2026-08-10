@@ -2,8 +2,8 @@
 
 @{
     ViewData["Title"] = "Tìm kiếm sách";
-    bool isSortByTitle = Model.SortBy == "Title" || Model.SortBy == "TitleDesc";
-    bool isSortByYear = Model.SortBy == "Year" || Model.SortBy == "YearDesc";
+    bool isSortByTitle = Model.SortBy == "title_asc" || Model.SortBy == "title_desc";
+    bool isSortByYear = Model.SortBy == "year_asc" || Model.SortBy == "year_desc";
 }
 
 <div class="container-fluid mt-3 px-4">
@@ -59,13 +59,13 @@
     <!-- button sắp xếp -->
     <div class="d-flex align-items-center mb-4">
         <span class="fw-bold me-3">Sắp xếp :</span>
-        <a href="@Url.Action("Index", new { sortBy = Model.SortBy == "Title" ? "TitleDesc" : "Title", searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })"
+        <a href="@Url.Action("Index", new { sortBy = Model.SortBy == "title_asc" ? "title_desc" : "title_asc", searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })"
            class="badge text-white text-decoration-none p-2 me-2 fs-6 rounded-0 @(isSortByTitle ? "bg-info" : "bg-secondary")">
-            Tên sách @(Model.SortBy == "Title" ? "↓" : Model.SortBy == "TitleDesc" ? "↑" : "")
+            Tên sách @(Model.SortBy == "title_asc" ? "↓" : Model.SortBy == "title_desc" ? "↑" : "")
         </a>
-        <a href="@Url.Action("Index", new { sortBy = Model.SortBy == "Year" ? "YearDesc" : "Year", searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })"
+        <a href="@Url.Action("Index", new { sortBy = Model.SortBy == "year_asc" ? "year_desc" : "year_asc", searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })"
            class="badge text-white text-decoration-none p-2 fs-6 rounded-0 @(isSortByYear ? "bg-info" : "bg-secondary")">
-            Năm sản xuất @(Model.SortBy == "Year" ? "↓" : Model.SortBy == "YearDesc" ? "↑" : "")
+            Năm sản xuất @(Model.SortBy == "year_asc" ? "↓" : Model.SortBy == "year_desc" ? "↑" : "")
         </a>
     </div>
 
@@ -92,8 +92,8 @@
                             <p class="card-text mb-1" style="font-size: 0.9rem;">Năm xuất bản : @book.PublishYear</p>
                             <p class="card-text mb-0" style="font-size: 0.9rem;">Thể loại : @(book.Category?.Name ?? "")</p>
 
-                            <!-- chỉ khách và thủ thư hiện icon giỏ hàng ở card book-->
-                            @if (User.IsInRole("Reader") || User.IsInRole("Librarian"))
+                            @* <!-- chỉ khách và thủ thư hiện icon giỏ hàng ở card book-->
+                            @if (!User.IsInRole("Admin") && (User.IsInRole("Reader") || User.IsInRole("Librarian")))
                             {
                                 <button type="button" class="btn btn-link text-dark position-absolute p-0"
                                         style="bottom: 15px; right: 20px; font-size: 1.6rem;"
@@ -101,7 +101,7 @@
                                         onclick="event.stopPropagation(); addToCart(@book.Id, '@book.Title', '@book.CoverImage')">
                                     <i class="fa-solid fa-cart-plus"></i>
                                 </button>
-                            }
+                            } *@
                         </div>
                     </div>
                 </div>
@@ -145,15 +145,14 @@
     <partial name="_AddBookModalPartial" /><!-- modal thêm sách -->
     <partial name="_EditBookModalPartial" /><!-- modal sửa sách-->
 }
-@if (User.IsInRole("Librarian"))
-{
-    <partial name="_UpdateStatusModalPartial" /><!-- modal cập nhật tình trạng sách -->
-}
+
 
 <!-- ================= SCRIPTS ================= -->
 @section Scripts {
     
     <script>
+       
+
         $(document).ready(function() {
             // chỉnh sửa ảnh
             $('#imagePreviewContainer').click(function() { $('#imageInput').click(); });
@@ -176,43 +175,6 @@
                     const reader = new FileReader();
                     reader.onload = function(e) { $('#editImagePreview').attr('src', e.target.result); }
                     reader.readAsDataURL(file);
-                }
-            });
-
-            // lấy thông tin kệ tầng
-            $('#shelfSelect').change(function() {
-                var shelfId = $(this).val();
-                var tierSelect = $('#tierSelect');
-                tierSelect.empty().append('<option value="">-- Đang tải... --</option>').prop('disabled', true);
-                if (shelfId) {
-                    $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
-                        tierSelect.empty();
-                        if (data.length > 0) {
-                            tierSelect.append('<option value="">-- Chọn tầng --</option>');
-                            $.each(data, function(index, tier) {
-                                tierSelect.append('<option value="' + tier.id + '">' + tier.tierName + '</option>');
-                            });
-                            tierSelect.prop('disabled', false);
-                        } else {
-                            tierSelect.append('<option value="">-- Kệ đã đầy --</option>');
-                        }
-                    });
-                } else {
-                    tierSelect.empty().append('<option value="">-- Chọn kệ trước --</option>');
-                }
-            });
-
-            $('#editShelfSelect').change(function() {
-                var shelfId = $(this).val();
-                var tierSelect = $('#editTierSelect');
-                tierSelect.empty().append('<option value="">-- Đang tải... --</option>');
-                if (shelfId) {
-                    $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
-                        tierSelect.empty();
-                        $.each(data, function(i, t) {
-                            tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
-                        });
-                    });
                 }
             });
 
@@ -250,25 +212,45 @@
             });
 
             // click vào card mở modal thông tin sách
-            $('.book-item').click(function() {
+            $('.book-item').click(function () {
                 var bookId = $(this).data('id');
-                $.get('/Home/GetBookDetails', { id: bookId }, function(data) {
+                $.get('/Home/GetBookDetails', { id: bookId }, function (data) {
+
+                    // 1. Gán thông tin cơ bản
                     $('#infoBookId').val(data.id);
-                    $('#infoCategory').text(data.categoryName || '');
-                    $('#infoShelf').text(data.shelfName || '');
-                    $('#infoTier').text(data.tierName || '');
+                    $('#infoCategory').text(data.categoryName || 'Chưa phân loại');
                     $('#infoISBN').text(data.isbn);
                     $('#infoTitle').text(data.title);
                     $('#infoAuthor').text(data.author);
                     $('#infoYear').text(data.publishYear);
                     $('#infoPublisher').text(data.publisher);
-                    $('#infoStatus').text(data.statusName);
+                    $('#infoLocation').text(data.suggestedLocation);
 
+                    // 2. GÁN THÔNG TIN ERD MỚI (TỔNG SỐ VÀ KHẢ DỤNG)
+                    $('#infoTotalCopies').text(data.totalCopies + ' cuốn');
+                    $('#infoAvailableCopies').text(data.availableCount + ' cuốn');
+
+                    // Khống chế ô chọn số lượng (Quantity)
+                    var qtyInput = $('#infoQuantity');
+                    if (qtyInput.length > 0) {
+                        qtyInput.attr('max', data.availableCount); // Giới hạn tối đa
+                        if (data.availableCount === 0) {
+                            qtyInput.val(0).prop('disabled', true); // Hết sách thì khóa ô nhập
+                        } else {
+                            qtyInput.val(1).prop('disabled', false); // Còn sách thì cho nhập
+                        }
+                    }
+
+                    // 3. Gán ảnh
                     var finalImg = data.coverImage ? data.coverImage : '/images/no-cover.png';
                     $('#infoImage').attr('src', finalImg);
 
+                    // 4. Các nút thao tác của Admin / Thủ thư
                     $('#btnOpenEdit').data('id', data.id);
+                    $('#btnManageCopies').attr('href', '/BookCopies/Index?bookId=' + data.id);
+                    $('#btnUpdateCopiesStatus').attr('href', '/BookCopies/Index?bookId=' + data.id);
 
+                    // Nút ẩn hiện
                     var btnToggle = $('#btnToggleVisibility');
                     btnToggle.data('id', data.id);
                     if (data.isActive) {
@@ -277,7 +259,10 @@
                         btnToggle.removeClass('btn-danger').addClass('btn-secondary').text('Hiện sách').data('action', 'show');
                     }
 
+                    // Hiện modal
                     $('#infoBookModal').modal('show');
+                }).fail(function () {
+                    alert("Lỗi: Không thể lấy dữ liệu từ máy chủ.");
                 });
             });
             //button ẩn hiện sách trong modal thông tin sách
@@ -306,61 +291,17 @@
                     $('#editId').val(data.id);
                     $('#editTitle').val(data.title);
                     $('#editCategory').val(data.categoryId);
-                    $('#editShelfSelect').val(data.shelfId);
                     $('#editISBN').val(data.isbn);
                     $('#editAuthor').val(data.author);
                     $('#editYear').val(data.publishYear);
                     $('#editPublisher').val(data.publisher);
-                    $('#editStatus').val(data.status);
                     $('#editExistingImage').val(data.coverImage);
                     $('#editImagePreview').attr('src', data.coverImage);
-
-                    $.get('/Home/GetAvailableTiers', { shelfId: data.shelfId }, function(tiers) {
-                        var tierSelect = $('#editTierSelect');
-                        tierSelect.empty();
-                        tierSelect.append('<option value="' + data.tierId + '">' + data.tierName + '</option>');
-                        $.each(tiers, function(i, t) {
-                            if (t.id != data.tierId) {
-                                tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
-                            }
-                        });
-                        tierSelect.val(data.tierId);
-                        $('#editBookModal').modal('show');
-                    });
+                    $('#editBookModal').modal('show');
                 });
             });
         });
 
-        //hàm mở modal update status
-        function openUpdateStatusModal() {
-            var bookId = $('#infoBookId').val();
-            var currentStatus = $('#infoStatus').text().trim();
-            $('#updateStatusBookId').val(bookId);
-            $('#bookStatusSelect').val(currentStatus);
-            var updateModal = new bootstrap.Modal(document.getElementById('updateStatusModal'));
-            updateModal.show();
-        }
-        //hàm lưu status trong modal
-        function saveBookStatus() {
-            var bookId = $('#updateStatusBookId').val();
-            var newStatus = $('#bookStatusSelect').val();
-
-            if (!newStatus || newStatus.trim() === "") {
-                alert("Vui lòng chọn tình trạng sách trước khi lưu!");
-                return; 
-            }
-
-            $.post('/Home/UpdateStatus', { id: bookId, status: newStatus }, function(response) {
-                if (response.success) {
-                    alert("Cập nhật tình trạng thành công!");
-                    $('#infoStatus').text(newStatus);
-                    var updateModal = bootstrap.Modal.getInstance(document.getElementById('updateStatusModal'));
-                    updateModal.hide();
-                } else {
-                    alert(response.message);
-                }
-            });
-        }
 
     </script>
 

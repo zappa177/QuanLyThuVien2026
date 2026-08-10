@@ -2,14 +2,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Entities;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Infrastructure.Data;
+using QuanLyThuVien.Web.Entities.Identity;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
 {
-    [Authorize(Roles = "Admin")] //chỉ có admin được quan lý người dùng
+    [Authorize(Roles = "Admin")] // Chỉ có Admin được quản lý người dùng
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
@@ -21,40 +20,36 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        //hiển thị danh sách người dùng trừ admin
-        public async Task<IActionResult> Index(string? searchName, string? searchReaderId, string? sortOrder)
+        // Hiển thị danh sách người dùng (Reader và Librarian)
+        public async Task<IActionResult> Index(string? searchName, string? searchUserCode, string? sortOrder)
         {
-            // 1. Phác thảo truy vấn (Vẫn giữ ở IQueryable, chưa chạy xuống DB)
-            // Tự động JOIN 3 bảng: AspNetUsers, AspNetUserRoles, AspNetRoles
             var query = from user in _context.Users
                         join userRole in _context.UserRoles on user.Id equals userRole.UserId
                         join role in _context.Roles on userRole.RoleId equals role.Id
-                        // Dùng LEFT JOIN cho bảng Readers (vì thủ thư không có trong bảng Readers)
-                        join reader in _context.Readers on user.Id equals reader.ApplicationUserId into readerGrp
-                        from readerOpt in readerGrp.DefaultIfEmpty()
                         where role.Name == "Reader" || role.Name == "Librarian"
                         select new
                         {
                             UserId = user.Id,
-                            FullName = user.UserName ?? user.FullName,
+                            FullName = user.FullName ?? user.UserName,
+                            UserCode = user.UserCode ?? "",
+                            Position = user.Position ?? "", // <-- MỚI LẤY THÊM POSITION
                             RoleName = role.Name,
-                            StudentCode = readerOpt != null ? readerOpt.StudentCode : "",
                             LockoutEnd = user.LockoutEnd
                         };
 
-            // tìm kiếm theo tên
+            // Tìm kiếm theo tên
             if (!string.IsNullOrEmpty(searchName))
             {
-                query = query.Where(u => u.FullName.Contains(searchName));
+                query = query.Where(u => u.FullName!.Contains(searchName));
             }
 
-            // tìm theo mã reader
-            if (!string.IsNullOrEmpty(searchReaderId))
+            // Tìm theo mã người dùng (UserCode)
+            if (!string.IsNullOrEmpty(searchUserCode))
             {
-                query = query.Where(u => !string.IsNullOrEmpty(u.StudentCode) && u.StudentCode.Contains(searchReaderId));
+                query = query.Where(u => !string.IsNullOrEmpty(u.UserCode) && u.UserCode.Contains(searchUserCode));
             }
 
-            // sắp xếp
+            // Sắp xếp
             if (sortOrder == "name_desc")
             {
                 query = query.OrderByDescending(u => u.FullName);
@@ -64,183 +59,156 @@ namespace QuanLyThuVien.Web.Controllers
                 query = query.OrderBy(u => u.FullName);
             }
 
-            //lấy dữ liệu ra list sau khi đã lọc và sắp xếp
-            // AsNoTracking() để giảm tải RAM 
             var rawData = await query.AsNoTracking().ToListAsync();
 
-            // map dữ liệu vào UserListViewModel để trả về view
+            // Map dữ liệu vào UserListViewModel
             var userList = rawData.Select(u => new UserListViewModel
             {
                 Id = u.UserId.ToString(),
-                FullName = u.FullName,
+                FullName = u.FullName ?? string.Empty,
                 Role = u.RoleName == "Reader" ? "Khách" : "Thủ thư",
-                ReaderId = u.StudentCode,
+                UserCode = u.UserCode,
+                Position = u.Position, // <-- MỚI MAP THÊM POSITION
                 IsHidden = u.LockoutEnd != null && u.LockoutEnd > DateTimeOffset.UtcNow
             }).ToList();
-            //truyền sang view để giữ giá trị ở các ô tìm kiếm và sắp xếp
+
+            // Truyền sang view để giữ giá trị ở các ô tìm kiếm và sắp xếp
             ViewBag.SearchName = searchName;
-            ViewBag.SearchReaderId = searchReaderId;
+            ViewBag.SearchUserCode = searchUserCode;
             ViewBag.SortOrder = sortOrder;
 
             return View(userList);
         }
-        //public async Task<IActionResult> Index(string searchName, string searchReaderId, string sortOrder)
-        //{
-        //    var allUsers = await _userManager.Users.ToListAsync();
-        //    var userList = new List<UserListViewModel>();
-
-        //    foreach (var user in allUsers)
-        //    {
-        //        var roles = await _userManager.GetRolesAsync(user);
-        //        string mainRole = roles.FirstOrDefault() ?? "";
-
-        //        if (mainRole != "Reader" && mainRole != "Librarian") continue;
-
-        //        bool isHidden = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.UtcNow;
-        //        string readerId = "";
-
-        //        if (mainRole == "Reader")
-        //        {
-        //            // Lấy StudentCode từ bảng Readers
-        //            var readerInfo = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-        //            if (readerInfo != null) readerId = readerInfo.StudentCode;
-        //        }
-
-        //        userList.Add(new UserListViewModel
-        //        {
-        //            Id = user.Id.ToString(),
-        //            FullName = user.FullName ?? user.UserName, // Hiển thị FullName
-        //            Role = mainRole == "Reader" ? "Khách" : "Thủ thư",
-        //            ReaderId = readerId,
-        //            IsHidden = isHidden
-        //        });
-        //    }
-
-        //    // Tìm kiếm theo tên (FullName)
-        //    if (!string.IsNullOrEmpty(searchName))
-        //        userList = userList.Where(u => u.FullName.Contains(searchName, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        //    // Tìm kiếm theo mã (StudentCode)
-        //    if (!string.IsNullOrEmpty(searchReaderId))
-        //        userList = userList.Where(u => !string.IsNullOrEmpty(u.ReaderId) && u.ReaderId.Contains(searchReaderId, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        //    // Sắp xếp
-        //    if (sortOrder == "name_desc")
-        //        userList = userList.OrderByDescending(u => u.FullName).ToList();
-        //    else
-        //        userList = userList.OrderBy(u => u.FullName).ToList();
-
-        //    ViewBag.SearchName = searchName;
-        //    ViewBag.SearchReaderId = searchReaderId;
-        //    ViewBag.SortOrder = sortOrder;
-
-        //    return View(userList);
-        //}
 
         // ==========================================
-        // 2. THÊM NGƯỜI DÙNG (POST)
+        // THÊM NGƯỜI DÙNG (POST)
         // ==========================================
-
-        //tạo người dùng mới, nếu role là Reader thì lưu vào bảng Readers với StudentCode
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(UserFormViewModel model)
         {
             if (string.IsNullOrEmpty(model.UserName))
-                ModelState.AddModelError("UserName", "Vui lòng nhập tên người dùng.");
+                ModelState.AddModelError("UserName", "Vui lòng nhập tên đăng nhập.");
             if (string.IsNullOrEmpty(model.Password))
                 ModelState.AddModelError("Password", "Vui lòng nhập mật khẩu khi thêm mới.");
-            if (model.Role == "Reader" && string.IsNullOrEmpty(model.ReaderId))
-                ModelState.AddModelError("ReaderId", "Vui lòng nhập mã người dùng cho Khách.");
+            if (string.IsNullOrEmpty(model.UserCode))
+                ModelState.AddModelError("UserCode", "Vui lòng nhập mã định danh (Mã thẻ / Mã nhân viên).");
 
-            if (ModelState.IsValid)
+            // Nếu form gửi lên thiếu dữ liệu bắt buộc
+            if (!ModelState.IsValid)
             {
-                var user = new ApplicationUser
+                var errors = string.Join(" ", ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage));
+                TempData["ErrorMessage"] = errors;
+                return RedirectToAction(nameof(Index));
+            }
+
+            // 1. KIỂM TRA TRÙNG TÊN ĐĂNG NHẬP
+            var existingUser = await _userManager.FindByNameAsync(model.UserName);
+            if (existingUser != null)
+            {
+                TempData["ErrorMessage"] = $"Tên đăng nhập '{model.UserName}' đã tồn tại trong hệ thống. Vui lòng chọn tên khác.";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // 2. KIỂM TRA TRÙNG MÃ ĐỊNH DANH (UserCode) nếu có nhập
+            if (!string.IsNullOrEmpty(model.UserCode))
+            {
+                var existingCode = await _context.Users.FirstOrDefaultAsync(u => u.UserCode == model.UserCode);
+                if (existingCode != null)
                 {
-                    UserName = model.UserName, // Dùng làm tài khoản đăng nhập Identity
-                    FullName = model.UserName, // Gán luôn làm FullName hiển thị
-                    Email = $"{model.UserName}@demoproject.me" // Identity thường yêu cầu Email (nếu hệ thống bạn cấu hình require)
-                };
-
-                var result = await _userManager.CreateAsync(user, model.Password);
-
-                if (result.Succeeded)
-                {
-                    await _userManager.AddToRoleAsync(user, model.Role);
-
-                    // Nếu là Khách thì lưu vào bảng Readers với StudentCode
-                    if (model.Role == "Reader")
-                    {
-                        var reader = new Readers
-                        {
-                            ApplicationUserId = user.Id,
-                            StudentCode = model.ReaderId
-                        };
-                        _context.Readers.Add(reader);
-                        await _context.SaveChangesAsync();
-                    }
-                    return RedirectToAction(nameof(Index)); // Quay về trang danh sách người dùng /user/index
+                    TempData["ErrorMessage"] = $"Mã định danh '{model.UserCode}' đã được sử dụng cho một tài khoản khác.";
+                    return RedirectToAction(nameof(Index));
                 }
             }
-            return RedirectToAction(nameof(Index)); // Nếu có lỗi, quay về trang danh sách người dùng (có thể hiển thị thông báo lỗi ở view)
+
+            // Khởi tạo ApplicationUser
+            var user = new ApplicationUser
+            {
+                UserName = model.UserName,
+                FullName = model.UserName,
+                UserCode = model.UserCode,
+                Position = model.Position, // <-- MỚI LƯU POSITION
+                Email = $"{model.UserName}@demoproject.me"
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password!);
+
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, model.Role);
+                TempData["SuccessMessage"] = "Thêm người dùng thành công!";
+                return RedirectToAction(nameof(Index));
+            }
+            else
+            {
+                // Bắt các lỗi khác từ Identity (ví dụ: Mật khẩu quá yếu)
+                var identityErrors = string.Join(" ", result.Errors.Select(e => e.Description));
+                TempData["ErrorMessage"] = $"Lỗi tạo tài khoản: {identityErrors}";
+                return RedirectToAction(nameof(Index));
+            }
         }
 
-        //sửa thông tin người dùng
+        // ==========================================
+        // SỬA THÔNG TIN NGƯỜI DÙNG (POST)
+        // ==========================================
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(UserFormViewModel model)
         {
-            var user = await _userManager.FindByIdAsync(model.Id);
-            if (user == null) return NotFound();
+            var user = await _userManager.FindByIdAsync(model.Id!);
+            if (user == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy người dùng.";
+                return RedirectToAction(nameof(Index));
+            }
 
-            //cập nhật mật khẩu (nếu ô mật khẩu không bị trống)
+            // KIỂM TRA TRÙNG MÃ ĐỊNH DANH KHI SỬA
+            if (!string.IsNullOrEmpty(model.UserCode))
+            {
+                // Kiểm tra xem UserCode này có bị ai KHÁC (khác user.Id hiện tại) dùng chưa
+                var existingCode = await _context.Users.FirstOrDefaultAsync(u => u.UserCode == model.UserCode && u.Id != user.Id);
+                if (existingCode != null)
+                {
+                    TempData["ErrorMessage"] = $"Mã định danh '{model.UserCode}' đã được sử dụng bởi người khác.";
+                    return RedirectToAction(nameof(Index));
+                }
+            }
+
+            // Cập nhật mật khẩu (nếu có nhập)
             if (!string.IsNullOrEmpty(model.Password))
             {
                 var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-                await _userManager.ResetPasswordAsync(user, token, model.Password);
+                var passResult = await _userManager.ResetPasswordAsync(user, token, model.Password);
+                if (!passResult.Succeeded)
+                {
+                    var passErrors = string.Join(" ", passResult.Errors.Select(e => e.Description));
+                    TempData["ErrorMessage"] = $"Lỗi đổi mật khẩu: {passErrors}";
+                    return RedirectToAction(nameof(Index));
+                }
             }
 
-            // cập nhật role và studentcode
+            // Cập nhật Role nếu có thay đổi
             var currentRoles = await _userManager.GetRolesAsync(user);
-            bool roleChanged = !currentRoles.Contains(model.Role);
-
-            if (roleChanged)
+            if (!currentRoles.Contains(model.Role))
             {
                 await _userManager.RemoveFromRolesAsync(user, currentRoles);
                 await _userManager.AddToRoleAsync(user, model.Role);
-
-                var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-
-                if (model.Role == "Reader") // Đổi từ Thủ thư -> Khách
-                {
-                    if (reader == null)
-                    {
-                        _context.Readers.Add(new Readers { ApplicationUserId = user.Id, StudentCode = model.ReaderId });
-                    }
-                    else
-                    {
-                        reader.StudentCode = model.ReaderId!;
-                    }
-                }
-                else // Đổi từ Khách -> Thủ thư
-                {
-                    if (reader != null) _context.Readers.Remove(reader);
-                }
-                await _context.SaveChangesAsync();
-            }
-            else if (model.Role == "Reader") // Role giữ nguyên là Khách, nhưng đổi Mã người dùng
-            {
-                var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-                if (reader != null)
-                {
-                    reader.StudentCode = model.ReaderId!;
-                    await _context.SaveChangesAsync();
-                }
             }
 
+            // Cập nhật UserCode và Position
+            user.UserCode = model.UserCode;
+            user.Position = model.Position; // <-- MỚI LƯU POSITION
+            await _userManager.UpdateAsync(user);
+
+            TempData["SuccessMessage"] = "Cập nhật thông tin người dùng thành công!";
             return RedirectToAction(nameof(Index));
         }
 
-        //ẩn hiện người dùng (khóa mở tài khoản đăng nhập)
+        // ==========================================
+        // KHÓA / MỞ KHÓA TÀI KHOẢN (TOGGLE STATUS)
+        // ==========================================
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(string id)
         {
             var user = await _userManager.FindByIdAsync(id);
@@ -249,9 +217,9 @@ namespace QuanLyThuVien.Web.Controllers
                 bool isHidden = user.LockoutEnd != null && user.LockoutEnd > DateTimeOffset.UtcNow;
 
                 if (isHidden)
-                    await _userManager.SetLockoutEndDateAsync(user, null); // Mở khóa (Hiện)
+                    await _userManager.SetLockoutEndDateAsync(user, null); // Mở khóa
                 else
-                    await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue); // Khóa (Ẩn)
+                    await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue); // Khóa vĩnh viễn
             }
             return RedirectToAction(nameof(Index));
         }

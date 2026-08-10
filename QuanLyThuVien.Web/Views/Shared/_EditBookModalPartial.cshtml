@@ -1,4 +1,4 @@
-﻿@using QuanLyThuVien.Domain.Enums
+﻿@using QuanLyThuVien.Web.Enums
 <!-- modal chỉnh sửa sách cho admin-->
 @if (User.IsInRole("Admin"))
 {
@@ -25,15 +25,6 @@
                             </div>
                         </div>
                         <div class="row mb-2 align-items-center">
-                            <label class="col-4 text-end mb-0">Vị trí :</label>
-                            <div class="col-8 d-flex align-items-center gap-2">
-                                <span>Kệ</span>
-                                <select id="editShelfSelect" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Shelves" required></select>
-                                <span>Tầng</span>
-                                <select id="editTierSelect" name="ShelfTierId" class="form-select form-select-sm border-0 rounded-0" required></select>
-                            </div>
-                        </div>
-                        <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Mã sách :</label>
                             <div class="col-8"><input type="text" name="ISBN" id="editISBN" class="form-control form-control-sm border-0 rounded-0" required /></div>
                         </div>
@@ -48,12 +39,6 @@
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Nhà xuất bản :</label>
                             <div class="col-8"><input type="text" name="Publisher" id="editPublisher" class="form-control form-control-sm border-0 rounded-0" required /></div>
-                        </div>
-                        <div class="row mb-2 align-items-center">
-                            <label class="col-4 text-end mb-0">Tình trạng :</label>
-                            <div class="col-8">
-                                <select name="Status" id="editStatus" class="form-select form-select-sm border-0 rounded-0" asp-items="Html.GetEnumSelectList<BookStatus>()" required></select> <!--gọi danh sách book status-->
-                            </div>
                         </div>
 
                         <div class="text-center mt-4 mb-3"> <!--phần chọn ảnh bìa-->

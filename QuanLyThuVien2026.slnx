@@ -1,11 +1,4 @@
 <Solution>
-  <Folder Name="/Core/">
-    <Project Path="QuanLyThuVien.Application/QuanLyThuVien.Application.csproj" />
-    <Project Path="QuanLyThuVien.Domain/QuanLyThuVien.Domain.csproj" />
-  </Folder>
-  <Folder Name="/Infrastructure/">
-    <Project Path="QuanLyThuVien.Infrastructure/QuanLyThuVien.Infrastructure.csproj" />
-  </Folder>
   <Folder Name="/Presentation/">
     <Project Path="QuanLyThuVien.Web/QuanLyThuVien.Web.csproj" />
   </Folder>

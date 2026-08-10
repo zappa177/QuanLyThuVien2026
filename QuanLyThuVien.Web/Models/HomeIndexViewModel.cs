@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
-using QuanLyThuVien.Domain.Common;
-using QuanLyThuVien.Domain.Entities;
+using QuanLyThuVien.Web.Common;
+using QuanLyThuVien.Web.Entities;
 
 namespace QuanLyThuVien.Web.Models
 {

@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Infrastructure.Data; // Thay bằng namespace DbContext thực tế của bạn
+using QuanLyThuVien.Web.Entities.Identity;
+using QuanLyThuVien.Web.Data; // Thay bằng namespace DbContext thực tế của bạn
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -20,7 +19,7 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        //lấy thông tin cá nhân của thủ thư , reader
+        /// Lấy thông tin cá nhân (áp dụng chung cho mọi Role)
         [HttpGet]
         public async Task<IActionResult> Edit()
         {
@@ -28,34 +27,19 @@ namespace QuanLyThuVien.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
-            // Kiểm tra xem user thuộc nhóm quyền nào
-            var roles = await _userManager.GetRolesAsync(user);
-            bool isReader = roles.Contains("Reader");
-
             var model = new UserProfileViewModel
             {
-                FullName = user.FullName ?? user.UserName ?? string.Empty,
+                FullName = user.FullName ?? string.Empty,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                IsReader = isReader
+                UserCode = user.UserCode,       // Lấy trực tiếp từ ApplicationUser
+                Position = user.Position        // Lấy trực tiếp từ ApplicationUser (Chức vụ / Lớp)
             };
-
-            // Nếu user là Khách (Reader), lấy thêm thông tin từ bảng Readers (như Lớp)
-            if (isReader)
-            {
-                var readerInfo = await _context.Readers
-                    .FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-
-                if (readerInfo != null)
-                {
-                    model.ClassName = readerInfo.ClassName;
-                }
-            }
 
             return View(model);
         }
 
-        //cập nhật thông tin cá nhân của thủ thư , reader
+        // Cập nhật thông tin cá nhân
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(UserProfileViewModel model)
@@ -63,19 +47,22 @@ namespace QuanLyThuVien.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return RedirectToAction("Login", "Account");
 
-            var roles = await _userManager.GetRolesAsync(user);
-            bool isReader = roles.Contains("Reader");
-            model.IsReader = isReader;
-
             if (!ModelState.IsValid)
             {
                 return View(model);
             }
 
-            // Cập nhật thông tin vào bảng ApplicationUser (Identity)
+            // AI CŨNG ĐƯỢC SỬA: Tên, Email, SĐT
             user.FullName = model.FullName;
             user.Email = model.Email;
             user.PhoneNumber = model.PhoneNumber;
+
+            // PHÂN QUYỀN ĐẶC BIỆT: Khách và Thủ thư không được tự sửa Mã và Vị trí/Lớp
+            if (User.IsInRole("Admin"))
+            {
+                user.UserCode = model.UserCode;
+                user.Position = model.Position;
+            }
 
             var result = await _userManager.UpdateAsync(user);
             if (!result.Succeeded)
@@ -87,21 +74,12 @@ namespace QuanLyThuVien.Web.Controllers
                 return View(model);
             }
 
-            // Nếu là Khách, cập nhật thêm thông tin riêng vào bảng Readers
-            if (isReader)
-            {
-                var readerInfo = await _context.Readers
-                    .FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-
-                if (readerInfo != null)
-                {
-                    readerInfo.ClassName = model.ClassName; // Cập nhật tên lớp
-                    _context.Readers.Update(readerInfo);
-                    await _context.SaveChangesAsync();
-                }
-            }
-
             ViewBag.SuccessMessage = "Cập nhật thông tin thành công!";
+
+            // Gán lại dữ liệu cũ cho Model để trả về View (tránh việc view hiển thị dữ liệu người dùng cố tình F12 nhập bậy)
+            model.UserCode = user.UserCode;
+            model.Position = user.Position;
+
             return View(model);
         }
     }

@@ -32,16 +32,36 @@
             </div>
         </div>
 
-        <!-- chỉ hiển thị input classname(lớp) nếu là reader-->
-        @if (Model.IsReader)
-        {
-            <div class="mb-3 row align-items-center">
-                <label class="col-sm-3 col-form-label text-end fw-bold">Lớp :</label>
-                <div class="col-sm-9">
-                    <input asp-for="ClassName" class="form-control rounded-0 bg-light" />
-                </div>
+        <!-- Mã người dùng -->
+        <div class="mb-3 row align-items-center">
+            <label class="col-sm-3 col-form-label text-end fw-bold">Mã người dùng :</label>
+            <div class="col-sm-9">
+                @if (User.IsInRole("Admin"))
+                {
+                    <input asp-for="UserCode" class="form-control rounded-0 bg-light" />
+                }
+                else
+                {
+                    <!-- Thêm readonly và đổi màu nền (bg-secondary tráng mờ) để biểu thị bị khóa -->
+                    <input asp-for="UserCode" class="form-control rounded-0 text-muted" style="background-color: #e9ecef;" readonly title="Vui lòng liên hệ Admin để thay đổi mã này" />
+                }
             </div>
-        }
+        </div>
+
+        <!-- Ô Position dùng chung cho tất cả mọi người (Lớp / Chức vụ) -->
+        <div class="mb-3 row align-items-center">
+            <label class="col-sm-3 col-form-label text-end fw-bold">Lớp / Chức vụ :</label>
+            <div class="col-sm-9">
+                @if (User.IsInRole("Admin"))
+                {
+                    <input asp-for="Position" class="form-control rounded-0 bg-light" />
+                }
+                else
+                {
+                    <input asp-for="Position" class="form-control rounded-0 text-muted" style="background-color: #e9ecef;" readonly title="Vui lòng liên hệ Admin để thay đổi thông tin này" />
+                }
+            </div>
+        </div>
 
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-success px-5 rounded-0">Lưu</button>

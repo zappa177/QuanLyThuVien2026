@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Entities;
-using QuanLyThuVien.Infrastructure.Data;
+using QuanLyThuVien.Web.Entities;
+using QuanLyThuVien.Web.Data;
 
 namespace QuanLyThuVien.Web.Controllers
 {
@@ -16,7 +16,7 @@ namespace QuanLyThuVien.Web.Controllers
             _context = context;
         }
 
-        //hiện danh sách kệ shelves/index
+        // Hiện danh sách kệ shelves/index
         public async Task<IActionResult> Index(string? searchString, string sortOrder = "name_asc", int page = 1)
         {
             var query = _context.Shelves
@@ -38,8 +38,6 @@ namespace QuanLyThuVien.Web.Controllers
 
             return View(await query.ToListAsync());
         }
-
-
 
         // Thêm mới hoặc chỉnh sửa tên kệ sách
         [HttpPost]
@@ -79,11 +77,10 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
-        // ẩn hiện kệ sách theo isactive (true/false)
+        // Ẩn hiện kệ sách theo isactive (true/false)
         [HttpPost]
         public async Task<IActionResult> ToggleShelfStatus(int id)
         {
-            // Lấy thông tin kệ sách
             var shelf = await _context.Shelves.FindAsync(id);
             if (shelf == null)
             {
@@ -98,12 +95,11 @@ namespace QuanLyThuVien.Web.Controllers
                 .Where(t => t.ShelfId == id)
                 .ToListAsync();
 
-            // lấy danh sách các tầng của kệ
             var tierIds = relatedTiers.Select(t => t.Id).ToList();
 
-            // Tìm toàn bộ sách đang nằm trên các tầng này
-            var relatedBooks = await _context.Books
-                .Where(b => tierIds.Contains(b.ShelfTierId))
+            // Lấy toàn bộ CÁC BẢN SAO VẬT LÝ (BookCopies) đang nằm trên các tầng này
+            var relatedCopies = await _context.BookCopies
+                .Where(bc => tierIds.Contains(bc.ShelfTierId))
                 .ToListAsync();
 
             // Cập nhật trạng thái tầng theo kệ
@@ -112,25 +108,23 @@ namespace QuanLyThuVien.Web.Controllers
                 tier.IsActive = shelf.IsActive;
             }
 
-            // Cập nhật trạng thái sách theo kệ
-            foreach (var book in relatedBooks)
+            // Cập nhật trạng thái bản sao vật lý theo kệ
+            foreach (var copy in relatedCopies)
             {
-                book.IsActive = shelf.IsActive;
+                copy.IsActive = shelf.IsActive;
             }
 
-            // Lưu thay đổi vào cơ sở dữ liệu (EF Core sẽ track cả Kệ, Tầng và Sách)
             await _context.SaveChangesAsync();
 
             var statusText = shelf.IsActive ? "hiện" : "ẩn";
             return Json(new
             {
                 success = true,
-                message = $"Đã {statusText} kệ sách, {relatedTiers.Count} tầng kệ và {relatedBooks.Count} cuốn sách bên trong."
+                message = $"Đã {statusText} kệ sách, {relatedTiers.Count} tầng kệ và {relatedCopies.Count} bản sao sách bên trong."
             });
         }
 
-
-        // Lấy danh sách tầng của 1 kệ cụ thể
+        // Lấy danh sách tầng của 1 kệ cụ thể (Thống kê số lượng BookCopies thay vì Books cũ)
         [HttpGet]
         public async Task<IActionResult> GetTiersByShelf(int shelfId)
         {
@@ -139,13 +133,13 @@ namespace QuanLyThuVien.Web.Controllers
 
             var tiers = await _context.ShelfTiers
                 .Where(t => t.ShelfId == shelfId)
-                .Include(t => t.Books)
+                .Include(t => t.BookCopies) // Lấy danh sách bản sao vật lý trên tầng
                 .Select(t => new
                 {
                     id = t.Id,
                     tierName = t.TierName,
                     capacity = t.Capacity,
-                    currentBooks = t.Books.Count,
+                    currentBooks = t.BookCopies.Count, // Đếm số lượng bản sao vật lý thực tế trên kệ
                     isActive = t.IsActive
                 }).ToListAsync();
 
@@ -170,7 +164,6 @@ namespace QuanLyThuVien.Web.Controllers
 
                 if (id > 0)
                 {
-                    // Cập nhật tầng hiện có
                     var tier = await _context.ShelfTiers.FindAsync(id);
                     if (tier == null) return Json(new { success = false, message = "Không tìm thấy tầng." });
 
@@ -180,7 +173,6 @@ namespace QuanLyThuVien.Web.Controllers
                 }
                 else
                 {
-                    // Thêm mới tầng (Không giới hạn số lượng)
                     var newTier = new ShelfTiers
                     {
                         ShelfId = shelfId,
@@ -200,31 +192,29 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
-        // Ẩn / Hiện Tầng (Set IsActive = false/true thay vì xóa)
+        // Ẩn / Hiện Tầng (Set IsActive = false/true)
         [HttpPost]
         public async Task<IActionResult> ToggleTierStatus(int id)
         {
-            // lấy thông tin tầng kệ
             var tier = await _context.ShelfTiers.FindAsync(id);
             if (tier == null)
             {
                 return Json(new { success = false, message = "Không tìm thấy tầng." });
             }
 
-            // đảo trạng thái tầng
+            // Đảo trạng thái tầng
             tier.IsActive = !tier.IsActive;
 
-            // lấy toàn bộ sách đang được xếp trên tầng này
-            var relatedBooks = await _context.Books
-                .Where(b => b.ShelfTierId == id)
+            // Lấy toàn bộ các bản sao vật lý nằm trên tầng này
+            var relatedCopies = await _context.BookCopies
+                .Where(bc => bc.ShelfTierId == id)
                 .ToListAsync();
 
-            // cập nhật trạng thái sách theo tầng
-            foreach (var book in relatedBooks)
+            // Cập nhật trạng thái bản sao vật lý theo tầng
+            foreach (var copy in relatedCopies)
             {
-                book.IsActive = tier.IsActive;
+                copy.IsActive = tier.IsActive;
             }
-
 
             await _context.SaveChangesAsync();
 
@@ -232,7 +222,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new
             {
                 success = true,
-                message = $"Đã {statusText} tầng và {relatedBooks.Count} cuốn sách nằm trên tầng này."
+                message = $"Đã {statusText} tầng và {relatedCopies.Count} bản sao sách nằm trên tầng này."
             });
         }
     }

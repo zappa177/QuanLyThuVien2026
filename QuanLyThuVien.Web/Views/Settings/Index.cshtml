@@ -1,0 +1,43 @@
+﻿@model IEnumerable<QuanLyThuVien.Web.Entities.SystemSettings>
+
+@{
+    ViewData["Title"] = "Cấu hình Hệ thống Thư viện";
+
+    var maxBooks = Model.FirstOrDefault(s => s.SettingKey == "MaxBooksPerTicket")?.SettingValue ?? "5";
+    var maxDays = Model.FirstOrDefault(s => s.SettingKey == "MaxBorrowDays")?.SettingValue ?? "14";
+}
+
+<div class="container py-4">
+    <h3 class="mb-4">Cài đặt Hệ thống</h3>
+
+    @if (TempData["SuccessMsg"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMsg"]
+        </div>
+    }
+
+    <div class="card rounded-0">
+        <div class="card-body">
+            <form asp-action="SaveSettings" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">1. Số lượng sách tối đa trong 1 phiếu mượn (Cuốn)</label>
+                    <input type="number" class="form-control" name="MaxBooksPerTicket" value="@maxBooks" min="1" required />
+                    <div class="form-text">Giới hạn số sách trong 1 phiếu.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">2. Hạn trả sách tối đa (Ngày)</label>
+                    <input type="number" class="form-control" name="MaxBorrowDays" value="@maxDays" min="1" required />
+                    <div class="form-text">Hạn mượn sách</div>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary rounded-0 px-4">Lưu cài đặt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

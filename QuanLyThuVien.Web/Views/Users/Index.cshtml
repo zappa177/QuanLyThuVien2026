@@ -19,78 +19,82 @@
         </li>
     </ul>
 
-    <!-- Nút Thêm người dùng -->
     <div class="mb-3">
-        <button type="button" class="btn btn-success text-white px-4" data-bs-toggle="modal" data-bs-target="#addUserModal">
+        <button type="button" class="btn btn-success text-white px-4 rounded-0" data-bs-toggle="modal" data-bs-target="#addUserModal">
             Thêm người dùng
         </button>
     </div>
 
-    <!-- Form Tìm kiếm & Sắp xếp -->
-    <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
-        <div class="col-auto">
-            <label class="fw-bold">Tên người dùng :</label>
-        </div>
-        <div class="col-md-3">
+    <!-- Form Tìm kiếm & Sắp xếp (Chuẩn Responsive xếp tầng) -->
+    <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-end">
+        <div class="col-12 col-md-3">
+            <label class="fw-bold mb-1">Tên người dùng :</label>
             <input type="text" name="searchName" value="@ViewBag.SearchName" class="form-control rounded-0 border bg-light" />
         </div>
-        <div class="col-auto">
-            <label class="fw-bold">Sắp xếp :</label>
-            <a asp-action="Index" asp-route-sortOrder="@(currentSort == "name_desc" ? "" : "name_desc")" asp-route-searchName="@ViewBag.SearchName" asp-route-searchReaderId="@ViewBag.SearchReaderId" class="badge bg-info text-dark text-decoration-none p-2">
-                @(currentSort == "name_desc" ? "Tên(Z-A)" : "Tên(A-Z)")
+        <div class="col-12 col-md-3">
+            <label class="fw-bold mb-1">Mã định danh :</label>
+            <input type="text" name="searchUserCode" value="@ViewBag.SearchUserCode" class="form-control rounded-0 border bg-light" />
+        </div>
+        <div class="col-12 col-md-auto">
+            <label class="fw-bold me-2 mb-1 d-block d-md-inline">Sắp xếp :</label>
+            <a asp-action="Index" asp-route-sortOrder="@(currentSort == "name_desc" ? "" : "name_desc")" asp-route-searchName="@ViewBag.SearchName" asp-route-searchUserCode="@ViewBag.SearchUserCode" class="badge bg-info text-dark text-decoration-none p-2 mt-1 mt-md-0">
+                @(currentSort == "name_desc" ? "Tên (Z-A)" : "Tên (A-Z)")
             </a>
         </div>
-
-        <div class="w-100"></div>
-
-        <div class="col-auto">
-            <label class="fw-bold">Mã người dùng :</label>
-        </div>
-        <div class="col-md-3">
-            <input type="text" name="searchReaderId" value="@ViewBag.SearchReaderId" class="form-control rounded-0 border bg-light" />
-        </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0">Tìm kiếm</button>
+        <div class="col-12 col-md-auto text-end text-md-start">
+            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 w-100 w-md-auto">Tìm kiếm</button>
         </div>
     </form>
 
     <!-- Bảng danh sách người dùng -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-bordered mb-0 align-middle">
-                <tbody>
-                    @foreach (var item in Model)
-                    {
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 align-middle">
+                    <thead class="table-light text-center fw-bold text-nowrap">
                         <tr>
-                            <td style="width: 25%;">@item.FullName</td>
-                            <td style="width: 20%;">@item.Role</td>
-                            <td style="width: 30%;">@(string.IsNullOrEmpty(item.ReaderId) ? "" : item.ReaderId)</td>
-                            <td style="width: 12%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-primary text-decoration-none btn-edit"
-                                   data-id="@item.Id"
-                                   data-role="@(item.Role == "Khách" ? "Reader" : "Librarian")"
-                                   data-readerid="@item.ReaderId">
-                                   Chỉnh sửa
-                                </a>
-                            </td>
-                            <td style="width: 13%; text-align: center;">
-                                <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline">
-                                    <button type="submit" class="btn btn-link p-0 text-decoration-none @(item.IsHidden ? "text-danger" : "text-primary")">
-                                        @(item.IsHidden ? "Hiện" : "Ẩn")
-                                    </button>
-                                </form>
-                            </td>
+                            <th>Tên đăng nhập</th>
+                            <th>Vai trò</th>
+                            <th>Mã định danh</th>
+                            <th>Chức vụ / Lớp</th>
+                            <th>Thao tác</th>
+                            <th>Trạng thái</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="ps-3 text-nowrap">@item.FullName</td>
+                                <td class="text-center text-nowrap">@item.Role</td>
+                                <td class="text-center text-nowrap">@(string.IsNullOrEmpty(item.UserCode) ? "" : item.UserCode)</td>
+                                <td class="text-center text-nowrap">@(string.IsNullOrEmpty(item.Position) ? "" : item.Position)</td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-primary text-decoration-none btn-edit"
+                                       data-id="@item.Id"
+                                       data-role="@(item.Role == "Khách" ? "Reader" : "Librarian")"
+                                       data-usercode="@item.UserCode"
+                                       data-position="@item.Position">
+                                        Chỉnh sửa
+                                    </a>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-link p-0 text-decoration-none fw-bold @(item.IsHidden ? "text-danger" : "text-success")">
+                                            @(item.IsHidden ? "Khóa" : "Mở")
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- 1. MODAL THÊM NGƯỜI DÙNG -->
-<!-- ========================================== -->
+<!-- MODAL THÊM NGƯỜI DÙNG -->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
@@ -101,20 +105,20 @@
             <form asp-action="Create" method="post">
                 <div class="modal-body">
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Tên người dùng :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Tên đăng nhập :</label>
+                        <div class="col-12 col-md-8">
                             <input type="text" name="UserName" class="form-control rounded-0 bg-light" required />
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Mật khẩu :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Mật khẩu :</label>
+                        <div class="col-12 col-md-8">
                             <input type="password" name="Password" class="form-control rounded-0 bg-light" required />
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Vai trò :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Vai trò :</label>
+                        <div class="col-12 col-md-8">
                             <select name="Role" id="addRoleSelect" class="form-select rounded-0 bg-light" required>
                                 <option value="">-- Chọn vai trò --</option>
                                 <option value="Reader">Khách</option>
@@ -122,11 +126,16 @@
                             </select>
                         </div>
                     </div>
-                    <!-- Ô mã người dùng ẩn/hiện dựa vào Role -->
-                    <div class="mb-3 row align-items-center" id="addReaderIdGroup" style="display: none;">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Mã người dùng :</label>
-                        <div class="col-sm-8">
-                            <input type="text" name="ReaderId" class="form-control rounded-0 bg-light" />
+                    <div class="mb-3 row align-items-center" id="addUserCodeGroup">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Mã định danh :</label>
+                        <div class="col-12 col-md-8">
+                            <input type="text" name="UserCode" class="form-control rounded-0 bg-light" placeholder="Nhập mã NV/Thẻ..." />
+                        </div>
+                    </div>
+                    <div class="mb-3 row align-items-center">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Chức vụ / Lớp :</label>
+                        <div class="col-12 col-md-8">
+                            <input type="text" name="Position" class="form-control rounded-0 bg-light" placeholder="Nhập Lớp hoặc Chức vụ..." />
                         </div>
                     </div>
                 </div>
@@ -138,9 +147,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- 2. MODAL CHỈNH SỬA NGƯỜI DÙNG -->
-<!-- ========================================== -->
+<!-- MODAL CHỈNH SỬA NGƯỜI DÙNG -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
@@ -152,25 +159,30 @@
                 <input type="hidden" name="Id" id="editUserId" />
                 <div class="modal-body">
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Mật khẩu :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Mật khẩu :</label>
+                        <div class="col-12 col-md-8">
                             <input type="password" name="Password" class="form-control rounded-0 bg-light" placeholder="Để trống nếu không đổi" />
                         </div>
                     </div>
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Vai trò :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Vai trò :</label>
+                        <div class="col-12 col-md-8">
                             <select name="Role" id="editRoleSelect" class="form-select rounded-0 bg-light" required>
                                 <option value="Reader">Khách</option>
                                 <option value="Librarian">Thủ thư</option>
                             </select>
                         </div>
                     </div>
-                    <!-- Ô mã người dùng ẩn/hiện dựa vào Role khi sửa -->
-                    <div class="mb-3 row align-items-center" id="editReaderIdGroup" style="display: none;">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Mã người dùng :</label>
-                        <div class="col-sm-8">
-                            <input type="text" name="ReaderId" id="editReaderIdInput" class="form-control rounded-0 bg-light" />
+                    <div class="mb-3 row align-items-center" id="editUserCodeGroup">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Mã định danh :</label>
+                        <div class="col-12 col-md-8">
+                            <input type="text" name="UserCode" id="editUserCodeInput" class="form-control rounded-0 bg-light" placeholder="Nhập mã NV/Thẻ..." />
+                        </div>
+                    </div>
+                    <div class="mb-3 row align-items-center">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Chức vụ / Lớp :</label>
+                        <div class="col-12 col-md-8">
+                            <input type="text" name="Position" id="editPositionInput" class="form-control rounded-0 bg-light" placeholder="Nhập Lớp hoặc Chức vụ..." />
                         </div>
                     </div>
                 </div>
@@ -184,39 +196,18 @@
 
 @section Scripts {
     <script>
-        // hàm ẩn hiện ô nhập mã người dùng theo role trong modal thêm người dùng
-        $('#addRoleSelect').change(function () {
-            if ($(this).val() === 'Reader') {
-                $('#addReaderIdGroup').show(); //nếu role là reader thì hiện ô nhập mã
-            } else {
-                $('#addReaderIdGroup').hide();
-                $('#addReaderIdGroup input').val(''); // Clear giá trị nếu ẩn
-            }
-        });
-
-        // hàm ẩn hiện ô nhập mã người dùng theo role trong modal sửa người dùng
-        $('#editRoleSelect').change(function () {
-            if ($(this).val() === 'Reader') {
-                $('#editReaderIdGroup').show(); //nếu role là reader thì hiện ô nhập mã
-            } else {
-                $('#editReaderIdGroup').hide();
-                $('#editReaderIdInput').val(''); // Clear giá trị nếu ẩn
-            }
-        });
-
-        // hàm khi bấm nút chỉnh sửa trong users/index , lấy dữ liệu của người dùng hiện tại gán vào các ô của modal sửa
         $('.btn-edit').click(function () {
             var id = $(this).data('id');
             var role = $(this).data('role');
-            var readerId = $(this).data('readerid');
+            var userCode = $(this).data('usercode');
+            var position = $(this).data('position');
 
             $('#editUserId').val(id);
-            $('#editRoleSelect').val(role).trigger('change'); // trigger để chạy sự kiện show/hide ô mã
-            $('#editReaderIdInput').val(readerId);
+            $('#editRoleSelect').val(role).trigger('change');
+            $('#editUserCodeInput').val(userCode);
+            $('#editPositionInput').val(position);
 
-            // Hiển thị modal chỉnh sửa
-            var editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
-            editModal.show();
+            new bootstrap.Modal(document.getElementById('editUserModal')).show();
         });
     </script>
 }

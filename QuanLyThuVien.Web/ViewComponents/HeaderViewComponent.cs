@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Infrastructure.Data;
+using QuanLyThuVien.Web.Entities.Identity;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.ViewComponents
@@ -47,16 +47,15 @@ namespace QuanLyThuVien.Web.ViewComponents
                         model.IsReader = true;
                     }
 
-                    // lấy số lượng cartitem của user hiện tại để hiện lên header
-                    var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-                    if (reader != null)
-                    {
-                        model.CartItemCount = await _context.CartItems.CountAsync(c => c.ReaderId == reader.Id);
-                    }
-                    else
-                    {
-                        model.CartItemCount = 0;
-                    }
+                    // MỚI: Đếm trực tiếp số lượng giỏ hàng thông qua UserId (ApplicationUser.Id)
+                    // Áp dụng chung cho cả Khách, Thủ thư lẫn Admin (vì ai cũng có thể có giỏ hàng)
+                    // Tính TỔNG số lượng sách trong giỏ hàng (Cộng dồn cột Quantity)
+                    // Lấy danh sách cột Quantity của user này về dạng List rồi dùng hàm Sum() mặc định của C#
+                    int count = (await _context.CartItems
+                        .Where(c => c.UserId == user.Id)
+                        .Select(c => c.Quantity)
+                        .ToListAsync())
+                        .Sum();
                 }
             }
 

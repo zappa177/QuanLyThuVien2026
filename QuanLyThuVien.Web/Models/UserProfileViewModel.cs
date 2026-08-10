@@ -12,9 +12,10 @@ namespace QuanLyThuVien.Web.Models
 
         public string? PhoneNumber { get; set; }
 
-        // Trường riêng dành cho Khách (Reader) như trong hình mẫu
-        public string? ClassName { get; set; } // Tên lớp (nếu entity của bạn đặt tên khác như Class, hãy đổi lại cho khớp)
+        // Mã người dùng (Mã thẻ / Mã sinh viên / Mã nhân viên)
+        public string? UserCode { get; set; }
 
-        public bool IsReader { get; set; } // Dùng để View phân biệt hiển thị ô "Lớp"
+        // Thay vì ClassName riêng cho Reader, dùng Position chung cho mọi Role (Sinh viên, Giảng viên, Thủ thư...)
+        public string? Position { get; set; }
     }
 }

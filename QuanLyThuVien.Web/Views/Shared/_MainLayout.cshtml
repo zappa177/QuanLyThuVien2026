@@ -40,35 +40,7 @@
     <!-- Dòng sinh Token ẩn cho AJAX gọi -->
     @Html.AntiForgeryToken()
 
-    <!-- MODAL giỏ hàng -->
-    <div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title fw-bold">Giỏ hàng sách</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body p-4">
-                    <p class="text-danger text-center mb-3" style="font-size: 0.9rem;">Tối đa được phép mượn 2 cuốn sách khác nhau</p>
-
-                    <!-- Nơi chứa sách -->
-                    <div id="cartModalContent"></div>
-
-                    <!-- Khu vực dành riêng cho Thủ thư/Admin nhập tên người mượn -->
-                    <div id="librarianInputArea" class="mt-4 p-3 bg-light border rounded" style="display: none;">
-                        <label class="form-label fw-bold">Tên đăng nhập (Username) của người mượn:</label>
-                        <input type="text" id="targetUsername" class="form-control" placeholder="Nhập username (để trống nếu tự mượn)">
-                    </div>
-
-                    <div class="text-center mt-4">
-                        <button type="button" id="btnCreateTicket" class="btn btn-success px-4 fw-bold" onclick="createTicketFromCart()">
-                            Tạo phiếu mượn
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+   
 
     <!-- NÚT LÊN ĐẦU TRANG -->
     <button id="btnBackToTop" title="Lên đầu trang">

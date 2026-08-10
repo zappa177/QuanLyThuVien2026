@@ -7,14 +7,16 @@ namespace QuanLyThuVien.Web.Models
         public string? Id { get; set; }
 
         [Required(ErrorMessage = "Vui lòng nhập tên người dùng.")]
-        public string UserName { get; set; }
+        public string UserName { get; set; } = string.Empty;
 
         [DataType(DataType.Password)]
         public string? Password { get; set; }
 
         [Required(ErrorMessage = "Vui lòng chọn vai trò.")]
-        public string Role { get; set; }
+        public string Role { get; set; } = string.Empty;
 
-        public string? ReaderId { get; set; }
+        // Đã đổi từ ReaderId thành UserCode cho khớp với ApplicationUser Entity
+        public string? UserCode { get; set; }
+        public string? Position { get; set; } // THÊM DÒNG NÀY
     }
 }

@@ -1,76 +1,62 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using QuanLyThuVien.Application.Interfaces.IServices;
-using QuanLyThuVien.Domain.Entities.Identity;
+using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly IAuthService _authService;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public AccountController(IAuthService authService, UserManager<ApplicationUser> userManager)
+        public AccountController(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
         {
-            _authService = authService;
+            _signInManager = signInManager;
             _userManager = userManager;
         }
 
-        // GET: /Account/Login
         [Route("/")]
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
-            if (User.Identity != null && User.Identity.IsAuthenticated)
-            {
-                return RedirectToAction("Index", "Home");
-            }
+            if (User.Identity != null && User.Identity.IsAuthenticated) return RedirectToAction("Index", "Home");
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
-        // POST: /Account/Login
         [Route("/")]
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string? returnUrl = null)
         {
             ViewData["ReturnUrl"] = returnUrl;
+            if (!ModelState.IsValid) return View(model);
 
-            // kiểm tra dữ liệu đầu vào 
-            if (!ModelState.IsValid)
+            // Logic đăng nhập đưa thẳng vào Controller
+            var user = await _userManager.FindByNameAsync(model.Username)
+                       ?? await _userManager.FindByEmailAsync(model.Username);
+
+            if (user != null)
             {
-                return View(model);
-            }
-
-            //kiểm tra tài khoản
-            var result = await _authService.LoginAsync(model.Username, model.Password);
-
-            //thành công -> chuyển hướng về trang Home
-            if (result.Succeeded)
-            {
-                // trở về trang trước đó 
-                if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                var result = await _signInManager.PasswordSignInAsync(user, model.Password, isPersistent: false, lockoutOnFailure: false);
+                if (result.Succeeded)
                 {
-                    return Redirect(returnUrl);
+                    if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl)) return Redirect(returnUrl);
+                    return RedirectToAction("Index", "Home");
                 }
-
-                return RedirectToAction("Index", "Home");
             }
 
-            // nếu lỗi thì trả về thông tin lỗi
             ModelState.AddModelError(string.Empty, "Sai tên đăng nhập hoặc mật khẩu");
             return View(model);
         }
 
-        // POST: /Account/Logout
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
-            await _authService.LogoutAsync();
+            await _signInManager.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }
 
@@ -105,6 +91,7 @@ namespace QuanLyThuVien.Web.Controllers
 
             if (result.Succeeded)
             {
+                await _signInManager.RefreshSignInAsync(user); //khi đổi mật khẩu không bị tự logout
                 ViewBag.SuccessMessage = "Đổi mật khẩu thành công!";
                 ModelState.Clear(); // Xóa dữ liệu cũ trên form
                 return View();

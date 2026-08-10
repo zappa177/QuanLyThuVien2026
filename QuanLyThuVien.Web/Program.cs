@@ -1,212 +1,82 @@
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Application.Interfaces;
-using QuanLyThuVien.Application.Interfaces.IRepositories;
-using QuanLyThuVien.Application.Interfaces.IServices;
-using QuanLyThuVien.Application.Services;
-using QuanLyThuVien.Application.Settings;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Infrastructure.Data;
-using QuanLyThuVien.Infrastructure.Repositories;
-using Serilog;
+using QuanLyThuVien.Web.Data;
+using QuanLyThuVien.Web.Entities.Identity;
 
-// 1. Khởi tạo Serilog Bootstrap Logger để bắt lỗi ngay từ lúc ứng dụng mới chạy lên
-Log.Logger = new LoggerConfiguration()
-    .WriteTo.Console()
-    .CreateBootstrapLogger();
+var builder = WebApplication.CreateBuilder(args);
 
-try
+// 1. Thêm In-Memory Cache (Thay thế Redis Cache)
+builder.Services.AddMemoryCache();
+
+// 2. Bộ Logger mặc định của ASP.NET Core đã được tự động thêm vào thông qua WebApplication.CreateBuilder
+// Bạn không cần phải cấu hình Serilog phức tạp nữa.
+
+
+// 4. Đăng ký DbContext
+builder.Services.AddDbContext<ApplicationDbContext>(option =>
+    option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+);
+
+// 5. Identity
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(option =>
 {
-    Log.Information("Khởi động ứng dụng ...");
-    var builder = WebApplication.CreateBuilder(args);
+    option.Password.RequiredLength = 4;
+    option.Password.RequireUppercase = false;
+    option.Password.RequireLowercase = false;
+    option.Password.RequireNonAlphanumeric = false;
+    option.Password.RequireDigit = false;
+    option.User.RequireUniqueEmail = true;
+    option.Lockout.AllowedForNewUsers = true;
+})
+.AddEntityFrameworkStores<ApplicationDbContext>()
+.AddDefaultTokenProviders();
 
-    //cấu hình sử dụng keyvault để lưu trữ các secret thay vì appsettings.json
-    //if (!builder.Environment.IsDevelopment())
-    //{
-    //    // Thay 'ten-key-vault-cua-ban' thành tên Key Vault thật của bạn trên Azure Portal
-    //    var keyVaultUri = new Uri("https://azure.net");
+builder.Services.ConfigureApplicationCookie(option =>
+{
+    option.LoginPath = "/";
+    option.AccessDeniedPath = "/Account/AccessDenied";
 
-    //    // Khởi tạo bộ kết nối bảo mật sử dụng danh tính Managed Identity của App Service
-    //    var secretClient = new Azure.Security.KeyVault.Secrets.SecretClient(keyVaultUri, new DefaultAzureCredential());
+    //option.ExpireTimeSpan = TimeSpan.FromDays(30);//nhớ đăng nhập 30 ngày
+    //option.SlidingExpiration = false; //không tự gia hạn khi người dùng có tương tác
+    //option.Cookie.IsEssential = true; //lưu cookie để xác thực
+});
 
-    //    try
-    //    {
-    //        // 1. Lấy và nạp chuỗi kết nối SQL Azure
-    //        // Thay 'Ten-Secret-Sql-Cua-Ban' bằng tên Secret thật trong Key Vault
-    //        var sqlSecret = secretClient.GetSecret("SqlDbConnection").Value.Value;
-    //        builder.Configuration["ConnectionStrings:DefaultConnection"] = sqlSecret;
+// 6. MVC
+builder.Services.AddControllersWithViews();
 
-    //        // 2. Lấy và nạp chuỗi kết nối Redis Cloud
-    //        // Thay 'Ten-Secret-Redis-Cua-Ban' bằng tên Secret thật trong Key Vault
-    //        var redisSecret = secretClient.GetSecret("RedisConnection").Value.Value;
-    //        builder.Configuration["ConnectionStrings:RedisCache"] = redisSecret;
+var app = builder.Build();
 
-    //        // 3. Lấy và nạp chuỗi kết nối Application Insights
-    //        // Thay 'Ten-Secret-Insights-Cua-Ban' bằng tên Secret thật trong Key Vault
-    //        var insightsSecret = secretClient.GetSecret("ApplicationInsightConnection").Value.Value;
-    //        builder.Configuration["ApplicationInsights:ConnectionString"] = insightsSecret;
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
 
-    //        // 4. Lấy và nạp chuỗi kết nối Azure Blob Storage
-    //        // Thay 'Ten-Secret-Blob-Cua-Ban' bằng tên Secret thật trong Key Vault
-    //        var blobSecret = secretClient.GetSecret("BlobStorageConnection").Value.Value;
-    //        builder.Configuration["AzureStorage:ConnectionString"] = blobSecret;
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
 
-    //        Log.Information("Nạp toàn bộ cấu hình từ Azure Key Vault thành công.");
-    //    }
-    //    catch (Exception ex)
-    //    {
-    //        Log.Error(ex, "Lỗi xảy ra khi cố gắng kết nối hoặc bóc tách cấu hình từ Key Vault.");
-    //        throw; // Giữ throw để ứng dụng dừng lại ngay nếu thiếu cấu hình Production quan trọng
-    //    }
-    //}
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Account}/{action=Login}/{id?}");
 
-    // Sử dụng Serilog thay thế bộ log mặc định của ASP.NET Core
-    builder.Host.UseSerilog((context, services, configuration) => configuration
-        .ReadFrom.Configuration(context.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.Console()
-        .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
-        .WriteTo.ApplicationInsights(
-            context.Configuration["ApplicationInsights:ConnectionString"],
-            TelemetryConverter.Traces));
-
-    // đăng ký cấu hình từ appsettings.json vào DI container để có thể inject vào các service
-    builder.Services.Configure<LibraryRules>(builder.Configuration.GetSection("LibraryRules"));
-
-    //Đăng ký Redis Distributed Cache
-    builder.Services.AddStackExchangeRedisCache(options =>
+// 7. Seed Admin Data (Sử dụng ILogger mặc định)
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    try
     {
-        options.Configuration = builder.Configuration.GetConnectionString("RedisCache");
-        options.InstanceName = "LibraryApp_";
-    });
-
-    // Kích hoạt giám sát hiệu suất tự động cho toàn bộ hệ thống Web App
-    builder.Services.AddApplicationInsightsTelemetry(options =>
-    {
-        options.ConnectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
-    });
-
-
-    // dang ky DbContext
-    builder.Services.AddDbContext<ApplicationDbContext>(option =>
-        option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
-        b => b.MigrationsAssembly("QuanLyThuVien.Infrastructure"))
-    );
-    // Đăng ký Interface DbContext
-    builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-
-    // đăng ký asp.net identity 
-    builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(option =>
-    {
-        // cấu hình mật khẩu
-        option.Password.RequiredLength = 4;
-        option.Password.RequireUppercase = false;
-        option.Password.RequireLowercase = false;
-        option.Password.RequireNonAlphanumeric = false;
-        option.Password.RequireDigit = false;
-        // cấu hình user
-        option.User.RequireUniqueEmail = true;
-        option.Lockout.AllowedForNewUsers = true;
-    })
-        .AddEntityFrameworkStores<ApplicationDbContext>()
-        .AddUserStore<UserStore<ApplicationUser, ApplicationRole, ApplicationDbContext, Guid>>()
-        .AddRoleStore<RoleStore<ApplicationRole, ApplicationDbContext, Guid>>();
-    builder.Services.ConfigureApplicationCookie(option =>
-    {
-        // Đường dẫn khi chưa đăng nhập
-        option.LoginPath = "/";
-
-        // ĐƯỜNG DẪN KHI BỊ TỪ CHỐI QUYỀN TRUY CẬP (403)
-        option.AccessDeniedPath = "/Account/AccessDenied";
-    });
-
-
-    //đăng ký repository
-    builder.Services.AddScoped<IBookRepository, BookRepository>();
-    builder.Services.AddScoped<ICartRepository, CartRepository>();
-    builder.Services.AddScoped<IBorrowTicketRepository, BorrowTicketRepository>();
-    builder.Services.AddScoped<IReaderRepository, ReaderRepository>();
-    builder.Services.AddScoped<IUserRepository, UserRepository>();
-    builder.Services.AddScoped<ICategoryRepository, CategoryRepository>();
-    builder.Services.AddScoped<IShelfRepository, ShelfRepository>();
-    builder.Services.AddScoped<IShelfTierRepository, ShelfTierRepository>();
-
-
-    // Đăng ký SERVICES
-    builder.Services.AddScoped<IBookService, BookService>();
-    builder.Services.AddScoped<ICartService, CartService>();
-    builder.Services.AddScoped<IBorrowTicketService, BorrowTicketService>();
-    builder.Services.AddScoped<IReaderService, ReaderService>();
-    builder.Services.AddScoped<IUserService, UserService>();
-    builder.Services.AddScoped<ICategoryService, CategoryService>();
-    builder.Services.AddScoped<IShelfService, ShelfService>();
-    builder.Services.AddScoped<IShelfTierService, ShelfTierService>();
-    builder.Services.AddScoped<IAuthService, AuthService>();
-
-    //đăng ký service cho xác thực phân quyền
-    builder.Services.AddAuthentication();
-    builder.Services.AddAuthorization();
-
-    //đăng ký service cho MVC
-    builder.Services.AddControllersWithViews();
-
-    var app = builder.Build();
-
-    // Kích hoạt Serilog Request Logging để ghi log các request HTTP
-    app.UseSerilogRequestLogging();
-
-    //cấu hình khi ứng dụng chạy trong production
-    if (!app.Environment.IsDevelopment())
-    {
-        app.UseExceptionHandler("/Home/Error");
-        app.UseHsts();
+        await AdminSeeder.SeedAdminAsync(services);
+        logger.LogInformation("Đã Seed tài khoản Admin thành công.");
     }
-    //dùng https
-    app.UseHttpsRedirection();
-
-
-    //truy cập file tĩnh (css, js, hình ảnh)
-    app.UseStaticFiles();
-    // routing
-    app.UseRouting();
-
-    // middleware cho xác thực và phân quyền
-    app.UseAuthentication();
-    app.UseAuthorization();
-
-    // Tạo route mặc định cho ứng dụng, nếu không có controller và action nào được chỉ định thì sẽ chuyển hướng đến Account/Login
-    app.MapControllerRoute(
-        name: "default",
-        pattern: "{controller=Account}/{action=Login}/{id?}");
-
-    // seed admin user mặc định khi chạy ứng dụng
-    using (var scope = app.Services.CreateScope())
+    catch (Exception ex)
     {
-        var services = scope.ServiceProvider;
-        try
-        {
-            await AdminSeeder.SeedAdminAsync(services);
-            Log.Information("Seed Admin user thành công."); // Bổ sung ghi log
-        }
-        catch (Exception ex)
-        {
-            Log.Error(ex, "Lỗi xảy ra khi seed dữ liệu Admin."); // Ghi log nếu lỗi
-        }
+        logger.LogError(ex, "Lỗi xảy ra khi seed dữ liệu Admin.");
     }
+}
 
-    // Đăng ký Rotativa để tạo file PDF từ HTML
-    Rotativa.AspNetCore.RotativaConfiguration.Setup(app.Environment.WebRootPath, "Rotativa");
-
-    app.Run();
-}
-catch (Exception ex)
-{
-    // Bắt lỗi nghiêm trọng khiến ứng dụng bị sập
-    Log.Fatal(ex, "Ứng dụng bị lỗi");
-}
-finally
-{
-    Log.CloseAndFlush(); //ghi hết lỗi vào file log trước khi kết thúc ứng dụng
-}
+app.Run();

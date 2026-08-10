@@ -1,0 +1,264 @@
+﻿@model QuanLyThuVien.Web.Models.BookCopyIndexViewModel
+@using QuanLyThuVien.Web.Enums
+
+@{
+    ViewData["Title"] = "Quản lý Bản sao vật lý";
+}
+
+<div class="container-fluid mt-4">
+    <div class="d-flex align-items-center mb-4 pb-3 border-bottom">
+        <img src="@Model.CoverImage" alt="@Model.BookTitle" style="width: 60px; height: 80px; object-fit: cover;" class="me-3 border shadow-sm" />
+        <div>
+            <h4 class="mb-1 text-primary fw-bold">@Model.BookTitle</h4>
+            <span class="text-muted"><i class="bi bi-book"></i> Quản lý các bản sao vật lý</span>
+        </div>
+        <div class="ms-auto text-end">
+            <a asp-controller="Home" asp-action="Index" class="btn btn-outline-secondary rounded-0 me-2">Quay lại Kho sách</a>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <button type="button" class="btn btn-success text-white rounded-0 px-4" onclick="openAddCopyModal()">
+                    <i class="fa-solid fa-plus"></i> Nhập thêm bản sao
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Bảng danh sách -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover align-middle text-center mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 15%;">Mã bản sao</th>
+                        <th style="width: 25%;">Vị trí lưu trữ</th>
+                        <th style="width: 15%;">Tình trạng</th>
+                        <th style="width: 15%;">Quy định mượn</th>
+                        <th style="width: 25%;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Copies.Any())
+                    {
+                        int stt = 1;
+                        foreach (var item in Model.Copies)
+                        {
+                            <tr>
+                                <td>@(stt++)</td>
+                                <td class="fw-bold">@item.CopyCode</td>
+                                <td>@item.Location</td>
+                                <td>
+                                    <!-- Màu sắc sinh động cho Tình trạng -->
+                                    <span class="badge @(item.Status == BookCopyStatus.Available ? "bg-success" : item.Status == BookCopyStatus.OnHold ? "bg-warning text-dark" : item.Status == BookCopyStatus.Borrowed ? "bg-primary" : "bg-danger")">
+                                        @item.Status
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (item.IsReferenceOnly)
+                                    {
+                                        <span class="text-danger fw-bold"><i class="fa-solid fa-ban"></i> Chỉ đọc tại chỗ</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success"><i class="fa-solid fa-check"></i> Được mượn về</span>
+                                    }
+                                </td>
+                                <td>
+                                    <!-- Nút Sửa vị trí / Trạng thái -->
+                                    <button class="btn btn-sm btn-primary rounded-0 me-2 px-3"
+                                            onclick="openEditCopyModal(@item.Id, '@item.CopyCode', @item.ShelfId, @item.TierId, '@((int)item.Status)', @(item.IsReferenceOnly.ToString().ToLower()))">
+                                        <i class="fa-solid fa-pen-to-square"></i> Cập nhật
+                                    </button>
+
+                                    <!-- Nút Ẩn/Hiện (Chỉ Admin) -->
+                                    @if (User.IsInRole("Admin"))
+                                    {
+                                        <button class="btn btn-sm @(item.IsActive ? "btn-danger" : "btn-secondary") rounded-0"
+                                                onclick="toggleCopyStatus(@item.Id)">
+                                            @(item.IsActive ? "Báo mất/Ẩn" : "Hiện lại")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="6" class="py-4 text-muted">Chưa có bản sao vật lý nào cho tựa sách này.</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL THÊM / SỬA BẢN SAO -->
+<div class="modal fade" id="copyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-0 border-0 shadow">
+            <div class="modal-header border-bottom bg-light">
+                <h5 class="modal-title fw-bold text-primary" id="copyModalTitle">Cập nhật bản sao</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="copyForm">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="id" id="CopyId" value="0" />
+                <input type="hidden" name="bookId" value="@Model.BookId" />
+
+                <div class="modal-body p-4">
+                    <!-- Mã cá biệt -->
+                    <div class="mb-3">
+                        <label class="fw-bold mb-1">Mã bản sao <span class="text-danger">*</span></label>
+                        <input type="text" name="copyCode" id="CopyCode" class="form-control rounded-0 bg-light" required @(User.IsInRole("Admin") ? "" : "readonly") />
+                        @if (!User.IsInRole("Admin"))
+                        {
+                            <small class="text-muted fst-italic">Thủ thư không được sửa mã cá biệt.</small>
+                        }
+                    </div>
+
+                    <!-- Vị trí lưu trữ -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="fw-bold mb-1">Kệ sách <span class="text-danger">*</span></label>
+                            <select id="shelfSelect" class="form-select rounded-0 bg-light" asp-items="ViewBag.Shelves" required>
+                                <option value="">-- Chọn Kệ --</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="fw-bold mb-1">Tầng <span class="text-danger">*</span></label>
+                            <select name="shelfTierId" id="tierSelect" class="form-select rounded-0 bg-light" required disabled>
+                                <option value="">-- Chọn kệ trước --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tình trạng sách -->
+                    <div class="mb-3">
+                        <label class="fw-bold mb-1">Tình trạng thực tế <span class="text-danger">*</span></label>
+                        <select name="status" id="Status" class="form-select rounded-0 bg-light" asp-items="Html.GetEnumSelectList<BookCopyStatus>()" required></select>
+                    </div>
+
+                    <!-- Quy định mượn (Chỉ Admin) -->
+                    <div class="mb-2 form-check">
+                        <input class="form-check-input" type="checkbox" name="isReferenceOnly" id="IsReferenceOnly" value="true" @(User.IsInRole("Admin") ? "" : "disabled")>
+                        <label class="form-check-label fw-bold" for="IsReferenceOnly">
+                            Sách quý hiếm (Chỉ được đọc tại chỗ, không cho mượn về)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top bg-light justify-content-center">
+                    <button type="submit" class="btn btn-success px-5 rounded-0 border-0 fw-bold">Lưu thông tin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Load Tier khi đổi Kệ (Sử dụng lại API GetAvailableTiers có sẵn ở HomeController)
+        $('#shelfSelect').change(function() {
+            var shelfId = $(this).val();
+            var tierSelect = $('#tierSelect');
+            tierSelect.empty().append('<option value="">-- Đang tải... --</option>');
+            if (shelfId) {
+                $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
+                    tierSelect.empty();
+                    if(data.length > 0) {
+                        tierSelect.append('<option value="">-- Chọn tầng --</option>');
+                        $.each(data, function(i, t) {
+                            tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
+                        });
+                        tierSelect.prop('disabled', false);
+                    } else {
+                        tierSelect.append('<option value="">-- Kệ đã đầy --</option>');
+                    }
+                });
+            } else {
+                tierSelect.prop('disabled', true).empty().append('<option value="">-- Chọn kệ trước --</option>');
+            }
+        });
+
+        // Hàm Reset và Mở Modal Thêm mới (Admin)
+        function openAddCopyModal() {
+            $('#copyModalTitle').text('Nhập thêm bản sao vật lý');
+            $('#CopyId').val(0);
+            $('#CopyCode').val('');
+            $('#shelfSelect').val('');
+            $('#tierSelect').empty().append('<option value="">-- Chọn kệ trước --</option>').prop('disabled', true);
+            $('#Status').val('0'); // Mặc định là Available
+            $('#IsReferenceOnly').prop('checked', false);
+
+            new bootstrap.Modal(document.getElementById('copyModal')).show();
+        }
+
+        // Hàm Mở Modal Chỉnh sửa (Cả Admin và Thủ thư)
+        function openEditCopyModal(id, copyCode, shelfId, tierId, statusId, isReferenceOnly) {
+            $('#copyModalTitle').text('Cập nhật Bản sao: ' + copyCode);
+            $('#CopyId').val(id);
+            $('#CopyCode').val(copyCode);
+            $('#Status').val(statusId);
+            $('#IsReferenceOnly').prop('checked', isReferenceOnly);
+
+            // Set Kệ và Tầng
+            $('#shelfSelect').val(shelfId);
+            var tierSelect = $('#tierSelect');
+            tierSelect.empty().append('<option value="">-- Đang tải... --</option>');
+
+            $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
+                tierSelect.empty();
+                $.each(data, function(i, t) {
+                    tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
+                });
+                tierSelect.val(tierId); // Trỏ đúng tầng đang lưu
+                tierSelect.prop('disabled', false);
+            });
+
+            new bootstrap.Modal(document.getElementById('copyModal')).show();
+        }
+
+        // Xử lý Submit Form
+        // Xử lý Submit Form
+        $('#copyForm').submit(function(e) {
+            e.preventDefault();
+
+            // 1. MẸO QUAN TRỌNG: Gỡ bỏ tạm thời các thuộc tính disabled 
+            // để hàm serialize() của jQuery có thể gom được toàn bộ dữ liệu (ShelfTierId, IsReferenceOnly...)
+            $('#tierSelect').prop('disabled', false);
+            $('#IsReferenceOnly').prop('disabled', false);
+
+            // 2. Chốt chặn Validation ở phía Client (Trình duyệt)
+            var tierId = $('#tierSelect').val();
+            if (!tierId || tierId == "0") {
+                alert("Vui lòng chọn Kệ và Tầng hợp lệ trước khi lưu!");
+                return; // Dừng lại, không gửi lên Server nữa
+            }
+
+            // 3. Gom dữ liệu và gửi đi
+            var formData = $(this).serialize();
+            
+            $.post('/BookCopies/SaveCopy', formData, function(res) {
+                if(res.success) {
+                    alert(res.message);
+                    location.reload();
+                } else {
+                    alert("Lỗi: " + res.message);
+                }
+            });
+        });
+
+        // Xử lý nút Ẩn/Hiện (Admin)
+        function toggleCopyStatus(id) {
+            if(confirm('Bạn có chắc chắn muốn thay đổi trạng thái hoạt động của cuốn sách này?')) {
+                $.post('/BookCopies/ToggleStatus', { id: id }, function(res) {
+                    if(res.success) location.reload();
+                    else alert("Lỗi: " + res.message);
+                });
+            }
+        }
+    </script>
+}

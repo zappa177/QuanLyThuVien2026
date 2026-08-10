@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Entities;
-using QuanLyThuVien.Infrastructure.Data;
+using QuanLyThuVien.Web.Entities;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers

@@ -2,11 +2,11 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Domain.Common;
-using QuanLyThuVien.Domain.Entities;
-using QuanLyThuVien.Domain.Entities.Identity;
-using QuanLyThuVien.Domain.Enums;
-using QuanLyThuVien.Infrastructure.Data;
+using QuanLyThuVien.Web.Common;
+using QuanLyThuVien.Web.Entities;
+using QuanLyThuVien.Web.Entities.Identity;
+using QuanLyThuVien.Web.Enums;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -23,40 +23,20 @@ namespace QuanLyThuVien.Web.Controllers
             _userManager = userManager;
         }
 
-        //lấy danh sách phiếu và phân trang
+        // --- 1. LẤY DANH SÁCH PHIẾU ---
         public async Task<IActionResult> Index(string? SearchTicketId, string? SearchBorrower, DateTime? fromDate, DateTime? toDate, BorrowStatus? status, string sortOrder = "date_desc", int page = 1)
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Challenge();
 
-            var query = _context.BorrowTickets
-                .Include(t => t.Reader)
-                    .ThenInclude(r => r!.ApplicationUser)
-                .AsQueryable();
+            var query = _context.BorrowTickets.Include(t => t.User).AsQueryable();
 
-            // phân quyền hiển thị
             if (User.IsInRole("Reader"))
             {
-                // Khách (Reader): Chỉ được xem phiếu của chính mình
-                var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user.Id);
-                if (reader == null)
-                {
-                    // Nếu khách chưa có hồ sơ reader, trả về danh sách trống
-                    var emptyModel = new BorrowTicketIndexViewModel
-                    {
-                        Tickets = new PagedResult<BorrowTickets>(new List<BorrowTickets>(), 0, page, 9)
-                    };
-                    return View(emptyModel);
-                }
-                query = query.Where(t => t.ReaderId == reader.Id);
+                query = query.Where(t => t.UserId == user.Id);
             }
-            //admin và thủ thư thì xem tất cả phiếu
 
-            // Cập nhật trạng thái Overdue (Quá hạn > 7 ngày) tự động khi load danh sách
-            var pendingOrBorrowingTickets = await query
-                .Where(t => t.Status == BorrowStatus.Borrowing)
-                .ToListAsync();
-
+            var pendingOrBorrowingTickets = await query.Where(t => t.Status == BorrowStatus.Borrowing).ToListAsync();
             bool hasChanges = false;
             foreach (var ticket in pendingOrBorrowingTickets)
             {
@@ -68,37 +48,24 @@ namespace QuanLyThuVien.Web.Controllers
             }
             if (hasChanges) await _context.SaveChangesAsync();
 
-            // lọc tìm kiếm theo mã phiếu
             if (!string.IsNullOrEmpty(SearchTicketId))
                 query = query.Where(t => t.Id.ToString().Contains(SearchTicketId));
 
-            // CHỈ ADMIN VÀ THỦ THƯ MỚI ĐƯỢC TÌM THEO TÊN NGƯỜI MƯỢN
             if ((User.IsInRole("Admin") || User.IsInRole("Librarian")) && !string.IsNullOrEmpty(SearchBorrower))
             {
-                query = query.Where(t => t.Reader!.ApplicationUser!.UserName!.Contains(SearchBorrower));
+                query = query.Where(t => t.User!.UserName!.Contains(SearchBorrower)
+                                      || t.User!.FullName!.Contains(SearchBorrower)
+                                      || t.User!.Position!.Contains(SearchBorrower)
+                                      || t.User!.UserCode!.Contains(SearchBorrower));
             }
 
-            if (fromDate.HasValue)
-                query = query.Where(t => t.BorrowDate >= fromDate.Value);
-            if (toDate.HasValue)
-                query = query.Where(t => t.BorrowDate <= toDate.Value);
-            if (status.HasValue)
-                query = query.Where(t => t.Status == status.Value);
+            if (fromDate.HasValue) query = query.Where(t => t.BorrowDate >= fromDate.Value);
+            if (toDate.HasValue) query = query.Where(t => t.BorrowDate <= toDate.Value);
+            if (status.HasValue) query = query.Where(t => t.Status == status.Value);
 
-            // sắp xếp
             ViewBag.CurrentSort = sortOrder;
-            switch (sortOrder)
-            {
-                case "date_asc":
-                    query = query.OrderBy(t => t.BorrowDate);
-                    break;
-                case "date_desc":
-                default:
-                    query = query.OrderByDescending(t => t.BorrowDate);
-                    break;
-            }
+            query = sortOrder == "date_asc" ? query.OrderBy(t => t.BorrowDate) : query.OrderByDescending(t => t.BorrowDate);
 
-            // Phân trang (9 item / trang cho lưới 3x3)
             int pageSize = 9;
             var totalItems = await query.CountAsync();
             var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
@@ -112,157 +79,175 @@ namespace QuanLyThuVien.Web.Controllers
                 ToDate = toDate,
                 Status = status
             };
-            // truyền dữ liệu thể loại và kệ cho chỉnh sửa sách trong danh sách phiếu mượn
-            if (User.IsInRole("Admin"))
-            {
-                var categories = await _context.Categories.Where(c => c.IsActive).ToListAsync();
-                var shelves = await _context.Shelves.Where(s => s.IsActive).ToListAsync();
-
-                // Lưu ý: Cần gõ đầy đủ Microsoft.AspNetCore.Mvc.Rendering.SelectList nếu trên cùng file chưa using
-                ViewBag.Categories = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(categories, "Id", "Name");
-                ViewBag.Shelves = new Microsoft.AspNetCore.Mvc.Rendering.SelectList(shelves, "Id", "Name");
-            }
 
             return View(model);
         }
 
-        //lấy thông tin chi tiết cho phiếu mượn
+        // --- 2. XEM CHI TIẾT PHIẾU ---
         [HttpGet]
-        public async Task<IActionResult> GetTicketDetails(int id)
+        public async Task<IActionResult> Details(int id)
         {
             var ticket = await _context.BorrowTickets
-                .Include(t => t.Reader)
-                    .ThenInclude(r => r!.ApplicationUser)
-                .Include(t => t.TicketDetails)
-                    .ThenInclude(d => d.Book)
+                .Include(t => t.User)
+                .Include(t => t.TicketDetails).ThenInclude(d => d.Book)
+                .Include(t => t.TicketDetails).ThenInclude(d => d.BookCopy)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            if (ticket == null) return NotFound();
+            if (ticket == null) return NotFound("Không tìm thấy phiếu mượn.");
 
-            //reader không xem phiếu khác
             if (User.IsInRole("Reader"))
             {
                 var user = await _userManager.GetUserAsync(User);
-                var reader = await _context.Readers.FirstOrDefaultAsync(r => r.ApplicationUserId == user!.Id);
-                if (reader == null || ticket.ReaderId != reader.Id)
-                {
-                    return Forbid();
-                }
+                if (user == null || ticket.UserId != user.Id) return Forbid();
             }
 
-            var data = new
-            {
-                id = ticket.Id,
-                borrowerName = ticket.Reader?.ApplicationUser?.UserName,
-                borrowDate = ticket.BorrowDate.ToString("dd/MM/yyyy"),
-                dueDate = ticket.ExpectedReturnDate.ToString("dd/MM/yyyy"),
-                returnDate = ticket.ActualReturnDate?.ToString("dd/MM/yyyy") ?? "Chưa trả",
-                status = (int)ticket.Status,
-                statusName = ticket.Status.ToString(), // Phục vụ hiển thị text cho khách
-                note = ticket.Note,
-                books = ticket.TicketDetails.Select(d => new { bookId = d.BookId, name = d.Book!.Title }).ToList()
-            };
-
-            return Json(data);
+            ViewBag.IsStaff = User.IsInRole("Admin") || User.IsInRole("Librarian");
+            return View(ticket);
         }
 
-
-        // cập nhật borrow status
+        // =========================================================
+        // 1. KIỂM TRA TỒN KHO KHI PENDING
+        // =========================================================
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> UpdateStatus([FromForm] UpdateTicketStatusModel model)
+        public async Task<IActionResult> CheckInventory(int ticketId)
         {
-            var ticket = await _context.BorrowTickets
-                .Include(t => t.TicketDetails)
-                    .ThenInclude(d => d.Book)
-                .FirstOrDefaultAsync(t => t.Id == model.TicketId);
-
+            var ticket = await _context.BorrowTickets.Include(t => t.TicketDetails).ThenInclude(d => d.Book)
+                                       .FirstOrDefaultAsync(t => t.Id == ticketId);
             if (ticket == null) return Json(new { success = false, message = "Không tìm thấy phiếu." });
 
-            ticket.Note = model.Note;
+            var requiredBooks = ticket.TicketDetails.GroupBy(d => d.BookId)
+                                      .Select(g => new { BookId = g.Key, Title = g.First().Book?.Title, Qty = g.Count() }).ToList();
 
-            // nếu cập nhật là returned thì actualreturndate là thời gian lúc cập nhật
-            if (model.NewStatus == BorrowStatus.Returned && ticket.Status != BorrowStatus.Returned)
+            foreach (var req in requiredBooks)
             {
-                ticket.ActualReturnDate = DateTime.UtcNow;
+                var available = await _context.BookCopies.CountAsync(c => c.BookId == req.BookId && c.Status == BookCopyStatus.Available && c.IsActive && !c.IsReferenceOnly);
+                if (available < req.Qty)
+                    return Json(new { success = false, message = $"Lỗi tồn kho: Tựa sách '{req.Title}' cần {req.Qty} cuốn, nhưng kho chỉ còn {available}. Vui lòng Giảm/Xóa sách khỏi phiếu để tiếp tục!" });
             }
 
-            // Cập nhật trạng thái mới cho phiếu
-            ticket.Status = model.NewStatus;
+            return Json(new { success = true, message = "Tồn kho hợp lệ! Bạn có thể duyệt phiếu." });
+        }
 
-            // 
-            foreach (var detail in ticket.TicketDetails)
-            {
-                if (detail.Book != null)
-                {
-                    if (model.NewStatus == BorrowStatus.Borrowing || model.NewStatus == BorrowStatus.Overdue)
-                    {
-                        // Nếu phiếu là Borrowing hoặc Overdue -> Sách ở trạng thái Đang mượn
-                        detail.Book.Status = BookStatus.Borrowed;
-                    }
-                    else if (model.NewStatus == BorrowStatus.Pending ||
-                             model.NewStatus == BorrowStatus.Returned ||
-                             model.NewStatus == BorrowStatus.Accepted ||
-                             model.NewStatus == BorrowStatus.Canceled)
-                    {
-                        // Nếu phiếu là Pending, Returned, Accepted, hoặc Canceled -> Sách ở trạng thái Sẵn sàng
-                        detail.Book.Status = BookStatus.Available;
-                    }
-                }
-            }
+        // =========================================================
+        // 2. DUYỆT PHIẾU (Pending -> Accepted)
+        // =========================================================
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> ApproveTicket(int ticketId)
+        {
+            var ticket = await _context.BorrowTickets.FindAsync(ticketId);
+            if (ticket == null || ticket.Status != BorrowStatus.Pending) return Json(new { success = false });
 
+            ticket.Status = BorrowStatus.Accepted;
             await _context.SaveChangesAsync();
-
             return Json(new { success = true });
         }
 
-
-        //kiểm tra phiếu mượn trước khi xác nhận
+        // =========================================================
+        // 3. XÓA BỚT SÁCH (KHI BÁO LỖI TỒN KHO)
+        // =========================================================
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
-        public async Task<IActionResult> CheckTicket(int ticketId)
+        public async Task<IActionResult> RemoveBookFromTicket(int ticketId, int bookId, bool removeAll)
         {
-            // 1. Lấy thông tin phiếu mượn kèm theo chi tiết và sách
-            var ticket = await _context.BorrowTickets
-                .Include(t => t.TicketDetails)
-                    .ThenInclude(d => d.Book)
-                .FirstOrDefaultAsync(t => t.Id == ticketId);
+            var detailsToRemove = await _context.BorrowTicketDetails.Where(d => d.BorrowTicketId == ticketId && d.BookId == bookId).ToListAsync();
+            if (!detailsToRemove.Any()) return Json(new { success = false });
 
-            if (ticket == null)
+            if (removeAll) _context.BorrowTicketDetails.RemoveRange(detailsToRemove);
+            else _context.BorrowTicketDetails.Remove(detailsToRemove.First());
+
+            await _context.SaveChangesAsync();
+
+            if (!await _context.BorrowTicketDetails.AnyAsync(d => d.BorrowTicketId == ticketId))
             {
-                return Json(new { success = false, message = "Không tìm thấy phiếu mượn." });
-            }
-
-            // 2. Kiểm tra xem có bất kỳ cuốn sách nào khác trạng thái Available không
-            bool hasUnavailableBook = ticket.TicketDetails
-                .Any(d => d.Book != null && d.Book.Status != BookStatus.Available);
-
-            if (hasUnavailableBook)
-            {
-                // 3. Nếu có sách không khả dụng -> Hủy phiếu
-                ticket.Status = BorrowStatus.Canceled;
-                ticket.Note = string.IsNullOrEmpty(ticket.Note)
-                    ? "Hệ thống tự động hủy vì có sách không khả dụng."
-                    : ticket.Note + "\n(Hệ thống tự động hủy vì có sách không khả dụng).";
-
+                var ticket = await _context.BorrowTickets.FindAsync(ticketId);
+                ticket!.Status = BorrowStatus.Canceled;
+                ticket.Note += "\n[Hủy tự động do xóa hết sách]";
                 await _context.SaveChangesAsync();
-
-                return Json(new
-                {
-                    success = true,
-                    isCanceled = true,
-                    message = "Phiếu đã tự động bị HỦY do có sách trong phiếu không khả dụng (đã bị mượn hoặc hỏng)."
-                });
+                return Json(new { success = true, isCanceled = true, message = "Đã xóa sách cuối cùng, phiếu bị hủy!" });
             }
+            return Json(new { success = true, isCanceled = false });
+        }
 
-            // 4. Nếu tất cả sách đều Available
-            return Json(new
+        // =========================================================
+        // 4. KIỂM TRA MÃ QUÉT XUẤT KHO
+        // =========================================================
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> ValidateBarcode(int ticketId, int bookId, string barcode)
+        {
+            var copy = await _context.BookCopies.FirstOrDefaultAsync(c => c.CopyCode.ToUpper() == barcode.Trim().ToUpper());
+            if (copy == null) return Json(new { isValid = false, message = "Mã sách không tồn tại!" });
+            if (copy.BookId != bookId) return Json(new { isValid = false, message = "Mã sách không thuộc tựa này!" });
+            if (copy.Status != BookCopyStatus.Available) return Json(new { isValid = false, message = "Sách đã bị mượn hoặc không khả dụng!" });
+            return Json(new { isValid = true });
+        }
+
+        // =========================================================
+        // 5. LƯU MÃ QUÉT (Sách -> OnHold, Phiếu vẫn Accepted)
+        // =========================================================
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> SaveScannedCodes(int ticketId, [FromForm] List<string> scannedCodes)
+        {
+            var ticket = await _context.BorrowTickets.Include(t => t.TicketDetails).FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            foreach (var code in scannedCodes)
             {
-                success = true,
-                isCanceled = false,
-                message = "Tất cả sách đều khả dụng. Phiếu hợp lệ!"
-            });
+                var copy = await _context.BookCopies.FirstOrDefaultAsync(c => c.CopyCode.ToUpper() == code.Trim().ToUpper());
+                if (copy != null)
+                {
+                    var emptyDetail = ticket!.TicketDetails.FirstOrDefault(d => d.BookId == copy.BookId && d.BookCopyId == null);
+                    if (emptyDetail != null)
+                    {
+                        emptyDetail.BookCopyId = copy.Id;
+                        copy.Status = BookCopyStatus.OnHold; // Sách giữ chỗ chờ lấy
+                    }
+                }
+            }
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // =========================================================
+        // 6. GIAO SÁCH CHO KHÁCH (Accepted -> Borrowing) (Sách -> Borrowed)
+        // =========================================================
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> ConfirmHandover(int ticketId)
+        {
+            var ticket = await _context.BorrowTickets.Include(t => t.TicketDetails).ThenInclude(d => d.BookCopy)
+                                       .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            ticket!.Status = BorrowStatus.Borrowing;
+            foreach (var detail in ticket.TicketDetails)
+            {
+                if (detail.BookCopy != null && detail.BookCopy.Status == BookCopyStatus.OnHold)
+                    detail.BookCopy.Status = BookCopyStatus.Borrowed;
+            }
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
+        }
+
+        // =========================================================
+        // 7. TRẢ SÁCH (Borrowing -> Returned)
+        // =========================================================
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> ConfirmReturnAll(int ticketId)
+        {
+            var ticket = await _context.BorrowTickets.Include(t => t.TicketDetails).ThenInclude(d => d.BookCopy)
+                                       .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            ticket!.ActualReturnDate = DateTime.Now;
+            ticket.Status = BorrowStatus.Returned;
+            foreach (var detail in ticket.TicketDetails)
+            {
+                if (detail.BookCopy != null) detail.BookCopy.Status = BookCopyStatus.Available;
+            }
+            await _context.SaveChangesAsync();
+            return Json(new { success = true });
         }
     }
 }

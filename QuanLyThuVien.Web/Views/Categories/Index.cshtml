@@ -25,44 +25,49 @@
         </button>
     </div>
 
-    <!-- Form Tìm kiếm -->
+    <!-- Form Tìm kiếm (Chuẩn Responsive) -->
     <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
-        <div class="col-auto">
-            <label class="fw-bold">Tên thể loại :</label>
+        <div class="col-12 col-md-auto">
+            <label class="fw-bold mb-0">Tên thể loại :</label>
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <input type="text" name="searchName" value="@ViewBag.SearchName" class="form-control rounded-0 border bg-light" />
         </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0">Tìm kiếm</button>
+        <div class="col-12 col-md-auto mt-2 mt-md-0">
+            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 w-100 w-md-auto">Tìm kiếm</button>
         </div>
     </form>
 
     <!-- Bảng danh sách thể loại -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-bordered mb-0 align-middle">
-                <tbody>
-                    @foreach (var item in Model)
-                    {
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 align-middle">
+                    <thead class="table-light text-nowrap">
                         <tr>
-                            <td class="fw-bold ps-4">@item.Name</td>
-                            <td style="width: 12%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-primary text-decoration-none" 
-                                   onclick="openEditModal(@item.Id, '@item.Name')">
-                                   Chỉnh sửa
-                                </a>
-                            </td>
-                            <td style="width: 12%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-decoration-none @(item.IsActive ? "text-danger" : "text-success")" 
-                                   onclick="toggleStatus(@item.Id)">
-                                   @(item.IsActive ? "Ẩn" : "Hiện")
-                                </a>
-                            </td>
+                            <th>Tên thể loại</th>
+                            <th class="text-center">Thao tác</th>
+                            <th class="text-center">Trạng thái</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td class="fw-bold ps-4 text-nowrap">@item.Name</td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-primary text-decoration-none"
+                                       onclick="openEditModal(@item.Id, '@item.Name')">Chỉnh sửa</a>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-decoration-none @(item.IsActive ? "text-danger" : "text-success")"
+                                       onclick="toggleStatus(@item.Id)">@(item.IsActive ? "Ẩn" : "Hiện")</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -79,8 +84,8 @@
                 <input type="hidden" id="CategoryId" name="id" value="0" />
                 <div class="modal-body">
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Tên thể loại :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Tên thể loại :</label>
+                        <div class="col-12 col-md-8">
                             <input type="text" id="CategoryName" name="name" class="form-control rounded-0 bg-light" required />
                         </div>
                     </div>
@@ -95,46 +100,32 @@
 
 @section Scripts {
     <script>
-        // Mở modal thêm mới
         function openAddModal() {
             $('#CategoryId').val(0);
             $('#CategoryName').val('');
             $('#modalTitle').text('Thêm thể loại');
-            var myModal = new bootstrap.Modal(document.getElementById('categoryModal'));
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('categoryModal')).show();
         }
 
-        // Mở modal chỉnh sửa
         function openEditModal(id, name) {
             $('#CategoryId').val(id);
             $('#CategoryName').val(name);
             $('#modalTitle').text('Chỉnh sửa thể loại');
-            var myModal = new bootstrap.Modal(document.getElementById('categoryModal'));
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('categoryModal')).show();
         }
 
-        // Xử lý submit form thêm sửa trong modal
-        $('#categoryForm').submit(function (e) {
+        $('#categoryForm').submit(function(e) {
             e.preventDefault();
-            var formData = $(this).serialize();
-
-            $.post('/Categories/SaveCategory', formData, function (response) {
-                if (response.success) {
-                    location.reload(); // Tải lại trang để cập nhật danh sách
-                } else {
-                    alert(response.message);
-                }
+            $.post('/Categories/SaveCategory', $(this).serialize(), function(response) {
+                if (response.success) location.reload();
+                else alert(response.message);
             });
         });
 
-        // Xử lý ẩn/hiện thể loại trong categories/index
         function toggleStatus(id) {
-            $.post('/Categories/ToggleCategoryStatus', { id: id }, function (response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert(response.message);
-                }
+            $.post('/Categories/ToggleCategoryStatus', { id: id }, function(response) {
+                if (response.success) location.reload();
+                else alert(response.message);
             });
         }
     </script>

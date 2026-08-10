@@ -1,4 +1,4 @@
-﻿@model IEnumerable<QuanLyThuVien.Domain.Entities.Shelves>
+﻿@model IEnumerable<QuanLyThuVien.Web.Entities.Shelves>
 
 @{
     ViewData["Title"] = "Quản lý tầng kệ sách";
@@ -27,66 +27,68 @@
         </button>
     </div>
 
-    <!-- Form Tìm kiếm -->
+    <!-- Form Tìm kiếm (Chuẩn Responsive) -->
     <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
-        <div class="col-auto">
-            <label class="fw-bold">Tên kệ :</label>
+        <div class="col-12 col-md-auto">
+            <label class="fw-bold mb-0">Tên kệ :</label>
         </div>
-        <div class="col-md-3">
+        <div class="col-12 col-md-3">
             <input type="text" name="searchString" value="@currentSearch" class="form-control rounded-0 border bg-light" />
         </div>
-        <div class="col-auto">
-            <label class="fw-bold">Sắp xếp :</label>
+        <div class="col-12 col-md-auto mt-2 mt-md-0">
+            <label class="fw-bold me-2">Sắp xếp :</label>
             <a asp-action="Index" asp-route-sortOrder="@(currentSort == "name_asc" ? "name_desc" : "name_asc")" asp-route-searchString="@currentSearch" class="badge bg-info text-dark text-decoration-none p-2">
                 @(currentSort == "name_asc" ? "Tên (A-Z)" : "Tên (Z-A)")
             </a>
         </div>
-        <div class="col-auto">
-            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0">Tìm kiếm</button>
+        <div class="col-12 col-md-auto mt-2 mt-md-0">
+            <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 w-100 w-md-auto">Tìm kiếm</button>
         </div>
     </form>
 
     <!-- Bảng danh sách kệ sách -->
     <div class="card border-0 shadow-sm">
         <div class="card-body p-0">
-            <table class="table table-bordered mb-0 align-middle">
-                <tbody>
-                    @foreach (var shelf in Model)
-                    {
-                        var activeTiersCount = shelf.ShelfTiers?.Count(t => t.IsActive) ?? 0;
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 align-middle">
+                    <thead class="table-light text-nowrap">
                         <tr>
-                            <td class="fw-bold ps-4" style="width: 55%;">
-                                @shelf.Name (@activeTiersCount tầng)
-                            </td>
-                            <td style="width: 15%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-primary text-decoration-none" 
-                                   onclick="openManageTierModal(@shelf.Id, '@shelf.Name')">
-                                   Quản lý tầng
-                                </a>
-                            </td>
-                            <td style="width: 15%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-primary text-decoration-none" 
-                                   onclick="openEditShelfModal(@shelf.Id, '@shelf.Name')">
-                                   Chỉnh sửa
-                                </a>
-                            </td>
-                            <td style="width: 15%; text-align: center;">
-                                <a href="javascript:void(0);" class="text-decoration-none @(shelf.IsActive ? "text-danger" : "text-success")" 
-                                   onclick="toggleShelfStatus(@shelf.Id)">
-                                   @(shelf.IsActive ? "Ẩn" : "Hiện")
-                                </a>
-                            </td>
+                            <th>Tên kệ</th>
+                            <th class="text-center">Quản lý tầng</th>
+                            <th class="text-center">Thao tác</th>
+                            <th class="text-center">Trạng thái</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var shelf in Model)
+                        {
+                            var activeTiersCount = shelf.ShelfTiers?.Count(t => t.IsActive) ?? 0;
+                            <tr>
+                                <td class="fw-bold ps-4">
+                                    @shelf.Name (@activeTiersCount tầng)
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-primary text-decoration-none"
+                                       onclick="openManageTierModal(@shelf.Id, '@shelf.Name')">Quản lý tầng</a>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-primary text-decoration-none"
+                                       onclick="openEditShelfModal(@shelf.Id, '@shelf.Name')">Chỉnh sửa</a>
+                                </td>
+                                <td class="text-center text-nowrap">
+                                    <a href="javascript:void(0);" class="text-decoration-none @(shelf.IsActive ? "text-danger" : "text-success")"
+                                       onclick="toggleShelfStatus(@shelf.Id)">@(shelf.IsActive ? "Ẩn" : "Hiện")</a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- 1. MODAL THÊM / SỬA KỆ SÁCH -->
-<!-- ========================================== -->
+<!-- MODAL THÊM / SỬA KỆ SÁCH -->
 <div class="modal fade" id="shelfModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
@@ -98,8 +100,8 @@
                 <input type="hidden" id="ShelfId" name="id" value="0" />
                 <div class="modal-body">
                     <div class="mb-3 row align-items-center">
-                        <label class="col-sm-4 col-form-label text-end fw-bold">Tên kệ :</label>
-                        <div class="col-sm-8">
+                        <label class="col-12 col-md-4 col-form-label text-md-end fw-bold">Tên kệ :</label>
+                        <div class="col-12 col-md-8">
                             <input type="text" id="ShelfName" name="name" class="form-control rounded-0 bg-light" required />
                         </div>
                     </div>
@@ -112,9 +114,7 @@
     </div>
 </div>
 
-<!-- ========================================== -->
-<!-- 2. MODAL QUẢN LÝ TẦNG -->
-<!-- ========================================== -->
+<!-- MODAL QUẢN LÝ TẦNG -->
 <div class="modal fade" id="manageTierModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
@@ -124,28 +124,26 @@
             </div>
 
             <div class="modal-body">
-                <!-- Form Thêm / Cập nhật tầng nằm ở phía trên -->
-                <form id="tierForm" class="row g-3 align-items-center mb-4 p-3 bg-light border">
+                <form id="tierForm" class="row g-3 align-items-end mb-4 p-3 bg-light border">
                     <input type="hidden" id="TierId" name="id" value="0" />
                     <input type="hidden" id="ModalShelfId" name="shelfId" value="" />
 
-                    <div class="col-md-5">
+                    <div class="col-12 col-md-5">
                         <label class="fw-bold form-label">Tên tầng (VD: Tầng 1)</label>
                         <input type="text" id="TierName" name="tierName" class="form-control rounded-0" required />
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-12 col-md-4 mt-2 mt-md-0">
                         <label class="fw-bold form-label">Giới hạn sách</label>
                         <input type="number" id="Capacity" name="capacity" class="form-control rounded-0" value="50" min="1" required />
                     </div>
-                    <div class="col-md-3 text-end mt-4">
+                    <div class="col-12 col-md-3 mt-3 mt-md-0 text-end">
                         <button type="submit" class="btn btn-success rounded-0 w-100">Lưu thông tin</button>
                     </div>
                 </form>
 
-                <!-- Bảng danh sách tầng -->
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle text-center">
-                        <thead class="table-light">
+                        <thead class="table-light text-nowrap">
                             <tr>
                                 <th>Tên tầng</th>
                                 <th>Sức chứa</th>
@@ -154,7 +152,7 @@
                             </tr>
                         </thead>
                         <tbody id="tierTableBody">
-                            <!-- Dữ liệu load động bằng AJAX -->
+                            <!-- Data -->
                         </tbody>
                     </table>
                 </div>
@@ -165,112 +163,89 @@
 
 @section Scripts {
     <script>
-        // button thêm kệ sách
         function openAddShelfModal() {
             $('#ShelfId').val(0);
             $('#ShelfName').val('');
             $('#shelfModalTitle').text('Thêm kệ sách');
-            var myModal = new bootstrap.Modal(document.getElementById('shelfModal'));//mở Modal thêm sửa kệ
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('shelfModal')).show();
         }
-        // button chỉnh sửa
+
         function openEditShelfModal(id, name) {
             $('#ShelfId').val(id);
             $('#ShelfName').val(name);
             $('#shelfModalTitle').text('Chỉnh sửa kệ sách');
-            var myModal = new bootstrap.Modal(document.getElementById('shelfModal')); //mở Modal thêm sửa kệ
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('shelfModal')).show();
         }
-        //hàm submit form để lưu tên kệ /shelves/saveshelf
-        $('#shelfForm').submit(function (e) {
-            e.preventDefault();
-            var formData = $(this).serialize();
 
-            $.post('/Shelves/SaveShelf', formData, function (response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert(response.message);
-                }
+        $('#shelfForm').submit(function(e) {
+            e.preventDefault();
+            $.post('/Shelves/SaveShelf', $(this).serialize(), function(response) {
+                if (response.success) location.reload();
+                else alert(response.message);
             });
         });
-        //hàm submit ẩn hiện kệ ở shelves/index
+
         function toggleShelfStatus(id) {
-            $.post('/Shelves/ToggleShelfStatus', { id: id }, function (response) {
-                if (response.success) {
-                    location.reload();
-                } else {
-                    alert(response.message);
-                }
+            $.post('/Shelves/ToggleShelfStatus', { id: id }, function(response) {
+                if (response.success) location.reload();
+                else alert(response.message);
             });
         }
 
-        // button quản lý tầng
         function openManageTierModal(shelfId, shelfName) {
             $('#ModalShelfId').val(shelfId);
             $('#modalShelfTitle').text('Quản lý tầng - ' + shelfName);
             resetTierForm();
             loadTiers(shelfId);
-
-            var myModal = new bootstrap.Modal(document.getElementById('manageTierModal')); //mở modal quản lý tầng
-            myModal.show();
+            new bootstrap.Modal(document.getElementById('manageTierModal')).show();
         }
-        //hàm hiện danh sách tầng them id kệ
+
         function loadTiers(shelfId) {
-            $.get('/Shelves/GetTiersByShelf', { shelfId: shelfId }, function (data) {
+            $.get('/Shelves/GetTiersByShelf', { shelfId: shelfId }, function(data) {
                 var rows = '';
-                $.each(data.tiers, function (i, tier) {
+                $.each(data.tiers, function(i, tier) {
                     var actionText = tier.isActive ? "Ẩn" : "Hiện";
                     var actionClass = tier.isActive ? "text-danger" : "text-success";
-
                     rows += `<tr>
-                        <td class="fw-bold">${tier.tierName}</td>
-                        <td>${tier.capacity}</td>
-                        <td>${tier.currentBooks} / ${tier.capacity}</td>
-                        <td>
-                            <a href="javascript:void(0);" class="text-primary text-decoration-none me-2" onclick="editTier(${tier.id}, '${tier.tierName}', ${tier.capacity})">Sửa</a>
-                            <a href="javascript:void(0);" class="${actionClass} text-decoration-none" onclick="toggleTierStatus(${tier.id}, ${shelfId})">${actionText}</a>
-                        </td>
-                    </tr>`;
+                                <td class="fw-bold">${tier.tierName}</td>
+                                <td>${tier.capacity}</td>
+                                <td>${tier.currentBooks} / ${tier.capacity}</td>
+                                <td>
+                                    <a href="javascript:void(0);" class="text-primary text-decoration-none me-2" onclick="editTier(${tier.id}, '${tier.tierName}', ${tier.capacity})">Sửa</a>
+                                    <a href="javascript:void(0);" class="${actionClass} text-decoration-none" onclick="toggleTierStatus(${tier.id}, ${shelfId})">${actionText}</a>
+                                </td>
+                            </tr>`;
                 });
                 $('#tierTableBody').html(rows);
             });
         }
-        //hàm button sửa trong quản lý tầng
+
         function editTier(id, name, capacity) {
             $('#TierId').val(id);
             $('#TierName').val(name);
             $('#Capacity').val(capacity);
         }
-        //hàm gia trí mặc định cho form tên tấng , giới hạn sách
+
         function resetTierForm() {
             $('#TierId').val(0);
             $('#TierName').val('');
             $('#Capacity').val(50);
         }
-        //hàm submit tạo tầng mới , button thêm tầng
-        $('#tierForm').submit(function (e) {
-            e.preventDefault();
-            var formData = $(this).serialize();
 
-            $.post('/Shelves/SaveTier', formData, function (response) {
+        $('#tierForm').submit(function(e) {
+            e.preventDefault();
+            $.post('/Shelves/SaveTier', $(this).serialize(), function(response) {
                 if (response.success) {
-                    var shelfId = $('#ModalShelfId').val();
-                    loadTiers(shelfId);
+                    loadTiers($('#ModalShelfId').val());
                     resetTierForm();
-                } else {
-                    alert(response.message);
-                }
+                } else alert(response.message);
             });
         });
-        //hàm ẩn hiện tầng trong quản lý tầng
+
         function toggleTierStatus(tierId, shelfId) {
-            $.post('/Shelves/ToggleTierStatus', { id: tierId }, function (response) {
-                if (response.success) {
-                    loadTiers(shelfId);
-                } else {
-                    alert(response.message);
-                }
+            $.post('/Shelves/ToggleTierStatus', { id: tierId }, function(response) {
+                if (response.success) loadTiers(shelfId);
+                else alert(response.message);
             });
         }
     </script>

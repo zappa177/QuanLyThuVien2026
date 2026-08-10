@@ -1,4 +1,4 @@
-﻿@using QuanLyThuVien.Domain.Enums
+﻿@using QuanLyThuVien.Web.Enums
 
 <!-- dành cho admin -->
 @if (User.IsInRole("Admin"))
@@ -33,20 +33,6 @@
                         </div>
 
                         <div class="row mb-2 align-items-center">
-                            <label class="col-4 text-end mb-0">Vị trí :</label>
-                            <div class="col-8 d-flex align-items-center gap-2">
-                                <span>Kệ</span>
-                                <select id="shelfSelect" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Shelves" required>
-                                    <option value="">-- Chọn --</option>
-                                </select>
-                                <span>Tầng</span>
-                                <select id="tierSelect" name="ShelfTierId" class="form-select form-select-sm border-0 rounded-0" required disabled>
-                                    <option value="">-- Chọn kệ trước --</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Mã sách :</label>
                             <div class="col-8">
                                 <input type="text" name="ISBN" class="form-control form-control-sm border-0 rounded-0" required />
@@ -71,14 +57,6 @@
                             <label class="col-4 text-end mb-0">Nhà xuất bản :</label>
                             <div class="col-8">
                                 <input type="text" name="Publisher" class="form-control form-control-sm border-0 rounded-0" required />
-                            </div>
-                        </div>
-
-                        <div class="row mb-2 align-items-center">
-                            <label class="col-4 text-end mb-0">Tình trạng :</label>
-                            <div class="col-8">
-                                <!-- Render tự động Enum BookStatus -->
-                                <select name="Status" class="form-select form-select-sm border-0 rounded-0" asp-items="Html.GetEnumSelectList<BookStatus>()" required></select>
                             </div>
                         </div>
 
