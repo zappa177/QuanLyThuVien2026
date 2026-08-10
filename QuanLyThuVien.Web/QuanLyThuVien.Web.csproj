@@ -21,22 +21,12 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.DependencyModel" Version="10.0.10" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Logs\" />
     <Folder Include="Migrations\" />
     <Folder Include="wwwroot\images\books\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="wwwroot\Rotativa\wkhtmltoimage.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Update="wwwroot\Rotativa\wkhtmltopdf.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

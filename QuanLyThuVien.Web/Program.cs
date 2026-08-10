@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Entities.Identity;
@@ -29,7 +29,9 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(option =>
     option.Lockout.AllowedForNewUsers = true;
 })
 .AddEntityFrameworkStores<ApplicationDbContext>()
-.AddDefaultTokenProviders();
+    .AddUserStore<UserStore<ApplicationUser, ApplicationRole, ApplicationDbContext, Guid>>()
+    .AddRoleStore<RoleStore<ApplicationRole, ApplicationDbContext, Guid>>();
+
 
 builder.Services.ConfigureApplicationCookie(option =>
 {
