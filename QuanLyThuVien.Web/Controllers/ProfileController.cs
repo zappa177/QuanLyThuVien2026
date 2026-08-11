@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Data; // Thay bằng namespace DbContext thực tế của bạn
+using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -32,8 +32,8 @@ namespace QuanLyThuVien.Web.Controllers
                 FullName = user.FullName ?? string.Empty,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber,
-                UserCode = user.UserCode,       // Lấy trực tiếp từ ApplicationUser
-                Position = user.Position        // Lấy trực tiếp từ ApplicationUser (Chức vụ / Lớp)
+                UserCode = user.UserCode,
+                Position = user.Position
             };
 
             return View(model);
@@ -76,7 +76,7 @@ namespace QuanLyThuVien.Web.Controllers
 
             ViewBag.SuccessMessage = "Cập nhật thông tin thành công!";
 
-            // Gán lại dữ liệu cũ cho Model để trả về View (tránh việc view hiển thị dữ liệu người dùng cố tình F12 nhập bậy)
+            // Gán lại dữ liệu cũ cho Model để trả về View (tránh việc view hiển thị dữ liệu người dùng cố tình F12 nhập)
             model.UserCode = user.UserCode;
             model.Position = user.Position;
 

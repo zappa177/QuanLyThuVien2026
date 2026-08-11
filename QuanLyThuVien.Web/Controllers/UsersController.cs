@@ -2,8 +2,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Data;
+using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -80,9 +80,9 @@ namespace QuanLyThuVien.Web.Controllers
             return View(userList);
         }
 
-        // ==========================================
-        // THÊM NGƯỜI DÙNG (POST)
-        // ==========================================
+
+        //them người dùng
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(UserFormViewModel model)
@@ -102,7 +102,7 @@ namespace QuanLyThuVien.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // 1. KIỂM TRA TRÙNG TÊN ĐĂNG NHẬP
+            // KIỂM TRA TRÙNG TÊN ĐĂNG NHẬP
             var existingUser = await _userManager.FindByNameAsync(model.UserName);
             if (existingUser != null)
             {
@@ -110,7 +110,7 @@ namespace QuanLyThuVien.Web.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            // 2. KIỂM TRA TRÙNG MÃ ĐỊNH DANH (UserCode) nếu có nhập
+            // KIỂM TRA TRÙNG MÃ ĐỊNH DANH (UserCode) nếu có nhập
             if (!string.IsNullOrEmpty(model.UserCode))
             {
                 var existingCode = await _context.Users.FirstOrDefaultAsync(u => u.UserCode == model.UserCode);
@@ -148,9 +148,9 @@ namespace QuanLyThuVien.Web.Controllers
             }
         }
 
-        // ==========================================
-        // SỬA THÔNG TIN NGƯỜI DÙNG (POST)
-        // ==========================================
+
+        // SỬA THÔNG TIN NGƯỜI DÙNG 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(UserFormViewModel model)
@@ -204,9 +204,9 @@ namespace QuanLyThuVien.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // ==========================================
-        // KHÓA / MỞ KHÓA TÀI KHOẢN (TOGGLE STATUS)
-        // ==========================================
+
+        // KHÓA / MỞ KHÓA TÀI KHOẢN 
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ToggleStatus(string id)

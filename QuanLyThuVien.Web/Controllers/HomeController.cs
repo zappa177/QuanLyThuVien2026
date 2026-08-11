@@ -119,7 +119,6 @@ namespace QuanLyThuVien.Web.Controllers
 
             if (book == null) return NotFound();
 
-            // ... (Logic đếm sách giữ nguyên như cũ, chỉ là giờ gọi trên biến book) ...
             int totalCopies = book.BookCopies?.Count ?? 0;
             var availableCopies = book.BookCopies?.Where(bc =>
                 bc.Status == BookCopyStatus.Available && bc.IsActive && !bc.IsReferenceOnly).ToList();
@@ -151,7 +150,7 @@ namespace QuanLyThuVien.Web.Controllers
             });
         }
 
-        // Cập nhật tình trạng của một Bản sao vật lý (BookCopy) cụ thể (chỉ dành cho thủ thư hoặc admin)
+        // Cập nhật tình trạng của một Bản sao vật lý  cụ thể (chỉ dành cho thủ thư hoặc admin)
         [HttpPost]
         [Authorize(Roles = "Librarian, Admin")]
         public async Task<IActionResult> UpdateCopyStatus(int copyId, string status)
@@ -163,7 +162,7 @@ namespace QuanLyThuVien.Web.Controllers
                     return Json(new { success = false, message = "Vui lòng chọn tình trạng sách hợp lệ." });
                 }
 
-                // Tìm kiếm bản sao vật lý (BookCopy) theo ID
+                // Tìm kiếm bản sao vật lý theo ID
                 var bookCopy = await _context.BookCopies.FindAsync(copyId);
                 if (bookCopy == null)
                     return Json(new { success = false, message = "Không tìm thấy bản sao vật lý của sách." });
@@ -216,7 +215,7 @@ namespace QuanLyThuVien.Web.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailableTiers(int shelfId)
         {
-            // Viết lại logic GetAvailableTiersByShelfIdAsync trực tiếp
+
             var tiers = await _context.ShelfTiers.Where(t => t.ShelfId == shelfId && t.IsActive).ToListAsync();
             var availableTiers = new List<ShelfTiers>();
 
@@ -267,7 +266,7 @@ namespace QuanLyThuVien.Web.Controllers
                     IsActive = true
                 };
 
-                // Lưu trực tiếp Tựa Sách (Không sinh ra bản sao vật lý nào ở bước này)
+                // Lưu trực tiếp Tựa Sách
                 _context.Books.Add(newBook);
                 await _context.SaveChangesAsync();
 
@@ -287,12 +286,12 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                // 1. Dùng _context để tìm sách thay vì _bookService
+
                 var existingBook = await _context.Books.FindAsync(model.Id);
                 if (existingBook == null)
                     return Json(new { success = false, message = "Không tìm thấy sách để chỉnh sửa." });
 
-                // 2. Logic kiểm tra trùng mã ISBN (Trước đây nằm trong Service, giờ mang lên Controller)
+                // Logic kiểm tra trùng mã ISBN 
                 if (!string.IsNullOrWhiteSpace(model.ISBN))
                 {
                     bool isIsbnExist = await _context.Books.AnyAsync(b => b.ISBN == model.ISBN && b.Id != model.Id);
@@ -312,7 +311,7 @@ namespace QuanLyThuVien.Web.Controllers
                     imagePath = "/images/books/" + fileName;
                 }
 
-                // 3. Chỉ cập nhật các thông tin chung của Tựa sách
+                // Chỉ cập nhật các thông tin chung của Tựa sách
                 existingBook.Title = model.Title;
                 existingBook.CategoryId = model.CategoryId;
                 existingBook.ISBN = model.ISBN;
@@ -321,7 +320,7 @@ namespace QuanLyThuVien.Web.Controllers
                 existingBook.Publisher = model.Publisher;
                 existingBook.CoverImage = imagePath;
 
-                // 4. Lưu trực tiếp bằng _context
+                // Lưu trực tiếp bằng _context
                 _context.Books.Update(existingBook);
                 await _context.SaveChangesAsync();
 
@@ -403,14 +402,14 @@ namespace QuanLyThuVien.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> AddToCartDb(int bookId, int quantity = 1)
         {
-            // 1. Kiểm tra đăng nhập
+            //Kiểm tra đăng nhập
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
             {
                 return Json(new { success = false, message = "Vui lòng đăng nhập để thêm sách vào giỏ hàng!" });
             }
 
-            // 2. Tính TỔNG số lượng cuốn sách hiện đang có trong giỏ hàng (Cộng dồn cột Quantity)
+            // Tính TỔNG số lượng cuốn sách hiện đang có trong giỏ hàng (Cộng dồn cột Quantity)
             // Nếu giỏ hàng trống, SumAsync() đối với kiểu số nguyên nullable có thể lỗi, nên phải gán mặc định về 0
             int totalBooksInCart = await _context.CartItems
                 .Where(c => c.UserId == user.Id)
@@ -418,14 +417,14 @@ namespace QuanLyThuVien.Web.Controllers
                 .SumAsync();
 
 
-            // 4. Kiểm tra tính hợp lệ của sách
+            // Kiểm tra tính hợp lệ của sách
             var book = await _context.Books.FindAsync(bookId);
             if (book == null || !book.IsActive)
             {
                 return Json(new { success = false, message = "Sách không tồn tại hoặc đã ngừng hoạt động." });
             }
 
-            // 5. Thêm sách vào giỏ hoặc cập nhật số lượng
+            //Thêm sách vào giỏ hoặc cập nhật số lượng
             var cartItem = await _context.CartItems
                 .FirstOrDefaultAsync(c => c.UserId == user.Id && c.BookId == bookId);
 
@@ -447,7 +446,7 @@ namespace QuanLyThuVien.Web.Controllers
 
             await _context.SaveChangesAsync();
 
-            // 6. Tính tổng số sách trong giỏ để cập nhật Badge hiển thị trên Header
+            //Tính tổng số sách trong giỏ để cập nhật Badge hiển thị trên Header
             int newCount = await _context.CartItems
                 .Where(c => c.UserId == user.Id)
                 .Select(c => c.Quantity)

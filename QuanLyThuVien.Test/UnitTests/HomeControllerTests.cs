@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Moq;
 using QuanLyThuVien.Web.Controllers;
 using QuanLyThuVien.Web.Data;
@@ -33,11 +34,12 @@ namespace QuanLyThuVien.Test.Controllers
         {
             var context = GetInMemoryDbContext();
             var mockUserManager = GetMockUserManager();
+            var mockCache = new Mock<IMemoryCache>();
 
             mockUserManager.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>()))
                            .ReturnsAsync((ApplicationUser)null!);
 
-            var controller = new HomeController(context, mockUserManager.Object);
+            var controller = new HomeController(context, mockUserManager.Object, mockCache.Object);
 
             var result = await controller.AddToCartDb(bookId: 1, quantity: 1) as JsonResult;
 
@@ -52,7 +54,6 @@ namespace QuanLyThuVien.Test.Controllers
         }
 
         // UTC-CART-02
-
         [Fact]
         public async Task AddToCartDb_UTC_CART_02_BookNotFoundOrInactive_ReturnsFalse()
         {
@@ -73,7 +74,11 @@ namespace QuanLyThuVien.Test.Controllers
             var validUser = new ApplicationUser { Id = Guid.NewGuid() };
             mockUserManager.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(validUser);
 
-            var controller = new HomeController(context, mockUserManager.Object);
+            // 1. Thêm mockCache
+            var mockCache = new Mock<IMemoryCache>();
+
+            // 2. Truyền mockCache.Object vào tham số thứ 3
+            var controller = new HomeController(context, mockUserManager.Object, mockCache.Object);
 
             // Act
             var result = await controller.AddToCartDb(bookId: 99, quantity: 1) as JsonResult;
@@ -88,9 +93,7 @@ namespace QuanLyThuVien.Test.Controllers
             Assert.Equal("Sách không tồn tại hoặc đã ngừng hoạt động.", message);
         }
 
-
         // UTC-CART-03
-
         [Fact]
         public async Task AddToCartDb_UTC_CART_03_NewBook_AddsToCartAndReturnsTrue()
         {
@@ -104,7 +107,11 @@ namespace QuanLyThuVien.Test.Controllers
             var validUser = new ApplicationUser { Id = userId };
             mockUserManager.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(validUser);
 
-            var controller = new HomeController(context, mockUserManager.Object);
+            // 1. Thêm mockCache
+            var mockCache = new Mock<IMemoryCache>();
+
+            // 2. Truyền mockCache.Object vào tham số thứ 3
+            var controller = new HomeController(context, mockUserManager.Object, mockCache.Object);
 
             var result = await controller.AddToCartDb(bookId: 1, quantity: 2) as JsonResult;
 
@@ -138,7 +145,11 @@ namespace QuanLyThuVien.Test.Controllers
             var validUser = new ApplicationUser { Id = userId };
             mockUserManager.Setup(x => x.GetUserAsync(It.IsAny<ClaimsPrincipal>())).ReturnsAsync(validUser);
 
-            var controller = new HomeController(context, mockUserManager.Object);
+            // 1. Khởi tạo mockCache
+            var mockCache = new Mock<IMemoryCache>();
+
+            // 2. Truyền thêm mockCache.Object vào tham số thứ 3
+            var controller = new HomeController(context, mockUserManager.Object, mockCache.Object);
 
             var result = await controller.AddToCartDb(bookId: 1, quantity: 2) as JsonResult;
 
@@ -156,6 +167,5 @@ namespace QuanLyThuVien.Test.Controllers
             Assert.Equal(1, cartItemsCount);
             Assert.Equal(3, cartItemInDb!.Quantity);
         }
-
     }
 }

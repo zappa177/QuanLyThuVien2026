@@ -40,7 +40,7 @@ namespace QuanLyThuVien.Web.Controllers
             }
             else if (reportType == "status")
             {
-                // MỚI: Thống kê tình trạng sách dựa trên BẢN SAO VẬT LÝ (BookCopies)
+                // Thống kê tình trạng sách dựa trên BẢN SAO VẬT LÝ 
                 var rawStatusData = await _context.BookCopies
                     .GroupBy(bc => bc.Status)
                     .Select(g => new
@@ -140,7 +140,7 @@ namespace QuanLyThuVien.Web.Controllers
                     worksheet.Cell(currentRow, 1).Value = item.StatusName;
                     worksheet.Cell(currentRow, 2).Value = item.BookCount;
                 }
-                // (Đã dọn dẹp đoạn code bị lặp foreach ở đây)
+
             }
             else if (reportType == "top10")
             {

@@ -26,7 +26,7 @@ namespace QuanLyThuVien.Web.Controllers
             var book = await _context.Books.FindAsync(bookId);
             if (book == null) return NotFound("Không tìm thấy tựa sách.");
 
-            // 1. Tạo câu truy vấn cơ bản
+            //Tạo câu truy vấn cơ bản thông tin bản sao của tựa sách
             var query = _context.BookCopies
                 .Include(c => c.ShelfTier)
                     .ThenInclude(t => t!.Shelf)
@@ -64,7 +64,7 @@ namespace QuanLyThuVien.Web.Controllers
             return View(model);
         }
 
-        // Lưu bản sao
+        // Lưu bản sao thêm mới , chỉnh sửa
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveCopy(int id, int bookId, string copyCode, int shelfTierId, BookCopyStatus status, bool isReferenceOnly)
