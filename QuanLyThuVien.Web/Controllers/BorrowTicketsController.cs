@@ -3,10 +3,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using QuanLyThuVien.Web.Common;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Entities;
 using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Enums;
-using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -23,7 +23,7 @@ namespace QuanLyThuVien.Web.Controllers
             _userManager = userManager;
         }
 
-        // --- 1. LẤY DANH SÁCH PHIẾU ---
+        // lấy danh sách phiếu và hiển thị
         public async Task<IActionResult> Index(string? SearchTicketId, string? SearchBorrower, DateTime? fromDate, DateTime? toDate, BorrowStatus? status, string sortOrder = "date_desc", int page = 1)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -83,7 +83,7 @@ namespace QuanLyThuVien.Web.Controllers
             return View(model);
         }
 
-        // --- 2. XEM CHI TIẾT PHIẾU ---
+        // chi tiết phiếu mượn
         [HttpGet]
         public async Task<IActionResult> Details(int id)
         {
@@ -105,9 +105,9 @@ namespace QuanLyThuVien.Web.Controllers
             return View(ticket);
         }
 
-        // =========================================================
-        // 1. KIỂM TRA TỒN KHO KHI PENDING
-        // =========================================================
+
+        // Kiểm tra tồn kho trước khi duyệt phiếu (Pending -> Accepted)
+
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> CheckInventory(int ticketId)
@@ -129,9 +129,9 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true, message = "Tồn kho hợp lệ! Bạn có thể duyệt phiếu." });
         }
 
-        // =========================================================
-        // 2. DUYỆT PHIẾU (Pending -> Accepted)
-        // =========================================================
+
+        //duyệt phiếu chuyển trạng thái từ Pending -> Accepted (Admin, Librarian)
+
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> ApproveTicket(int ticketId)
@@ -144,9 +144,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true });
         }
 
-        // =========================================================
-        // 3. XÓA BỚT SÁCH (KHI BÁO LỖI TỒN KHO)
-        // =========================================================
+        //xóa sách từ phiếu
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> RemoveBookFromTicket(int ticketId, int bookId, bool removeAll)
@@ -170,9 +168,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true, isCanceled = false });
         }
 
-        // =========================================================
-        // 4. KIỂM TRA MÃ QUÉT XUẤT KHO
-        // =========================================================
+        //Kiểm tra mã sách trước khi lưu tránh lỗi quét nhầm sách khác tựa, hoặc sách đã bị mượn
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> ValidateBarcode(int ticketId, int bookId, string barcode)
@@ -184,9 +180,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { isValid = true });
         }
 
-        // =========================================================
-        // 5. LƯU MÃ QUÉT (Sách -> OnHold, Phiếu vẫn Accepted)
-        // =========================================================
+        //Lưu mã sách đã quét vào phiếu mượn, chuyển trạng thái sách sang OnHold (giữ chỗ chờ lấy)
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> SaveScannedCodes(int ticketId, [FromForm] List<string> scannedCodes)
@@ -210,9 +204,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true });
         }
 
-        // =========================================================
-        // 6. GIAO SÁCH CHO KHÁCH (Accepted -> Borrowing) (Sách -> Borrowed)
-        // =========================================================
+        // Xác nhận đã giao sách cho bạn đọc, chuyển trạng thái phiếu từ Accepted -> Borrowing và sách từ OnHold -> Borrowed
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> ConfirmHandover(int ticketId)
@@ -230,9 +222,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = true });
         }
 
-        // =========================================================
-        // 7. TRẢ SÁCH (Borrowing -> Returned)
-        // =========================================================
+        //trả sách 
         [HttpPost]
         [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> ConfirmReturnAll(int ticketId)

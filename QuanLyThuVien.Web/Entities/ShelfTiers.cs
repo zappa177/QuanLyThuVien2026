@@ -20,7 +20,7 @@ namespace QuanLyThuVien.Web.Entities
 
         public virtual Shelves? Shelf { get; set; }
 
-        // CẬP NHẬT: Tầng chứa Bản sao vật lý, không chứa Tựa sách
+        //Tầng chứa Bản sao vật lý, không chứa Tựa sách
         public virtual ICollection<BookCopies> BookCopies { get; set; } = new List<BookCopies>();
     }
 }

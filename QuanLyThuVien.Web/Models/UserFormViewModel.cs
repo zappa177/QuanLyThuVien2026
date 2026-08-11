@@ -15,7 +15,6 @@ namespace QuanLyThuVien.Web.Models
         [Required(ErrorMessage = "Vui lòng chọn vai trò.")]
         public string Role { get; set; } = string.Empty;
 
-        // Đã đổi từ ReaderId thành UserCode cho khớp với ApplicationUser Entity
         public string? UserCode { get; set; }
         public string? Position { get; set; } // THÊM DÒNG NÀY
     }

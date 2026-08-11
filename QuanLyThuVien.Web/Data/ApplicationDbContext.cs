@@ -18,7 +18,7 @@ namespace QuanLyThuVien.Web.Data
         public DbSet<Shelves> Shelves { get; set; }
         public DbSet<ShelfTiers> ShelfTiers { get; set; }
         public DbSet<Books> Books { get; set; }
-        public DbSet<BookCopies> BookCopies { get; set; } // BẢNG MỚI: BẢN SAO VẬT LÝ
+        public DbSet<BookCopies> BookCopies { get; set; }
         public DbSet<BorrowTickets> BorrowTickets { get; set; }
         public DbSet<BorrowTicketDetails> BorrowTicketDetails { get; set; }
         public DbSet<CartItems> CartItems { get; set; }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using QuanLyThuVien.Web.Common;
 using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Entities;
@@ -17,11 +18,14 @@ namespace QuanLyThuVien.Web.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IMemoryCache _cache;
+        private const string CATEGORY_CACHE_KEY = "ActiveCategoriesList";
 
-        public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public HomeController(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMemoryCache cache)
         {
             _context = context;
             _userManager = userManager;
+            _cache = cache;
         }
 
         // Trang chủ Index hiển thị danh mục tựa sách (Có phân trang, tìm kiếm, lọc, sắp xếp)
@@ -72,8 +76,19 @@ namespace QuanLyThuVien.Web.Controllers
             var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
             var pagedBooks = new PagedResult<Books>(items, totalCount, pageNumber, pageSize);
 
-            // 2. Load Thể loại
-            var categories = await _context.Categories.Where(c => c.IsActive).ToListAsync();
+
+            // Load thể loại từ cache để giảm tải truy vấn Database, đặc biệt khi có nhiều người dùng truy cập cùng lúc
+            var categories = await _cache.GetOrCreateAsync(CATEGORY_CACHE_KEY, async entry =>
+            {
+                // Nếu không có ai truy cập trong 30 phút, xóa cache
+                entry.SlidingExpiration = TimeSpan.FromMinutes(30);
+
+                // Cứ sau 12 giờ là bắt buộc phải làm mới cache từ Database
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12);
+
+                // Lấy dữ liệu từ Database (Chỉ chạy khi Cache trống)
+                return await _context.Categories.Where(c => c.IsActive).ToListAsync();
+            });
 
             var model = new HomeIndexViewModel
             {

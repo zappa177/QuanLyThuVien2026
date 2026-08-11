@@ -10,8 +10,6 @@ namespace QuanLyThuVien.Web.Models
 
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu mới.")]
         [DataType(DataType.Password)]
-        // Bạn có thể bỏ comment dòng dưới nếu muốn bắt buộc mật khẩu dài tối thiểu 6 ký tự
-        // [StringLength(100, ErrorMessage = "Mật khẩu phải từ {2} đến {1} ký tự.", MinimumLength = 6)]
         public string NewPassword { get; set; } = string.Empty;
     }
 }

@@ -8,7 +8,7 @@
 
         // Đã đổi từ ReaderId thành UserCode cho khớp với Entity ApplicationUser
         public string UserCode { get; set; } = string.Empty;
-        public string? Position { get; set; } // THÊM DÒNG NÀY
+        public string? Position { get; set; }
 
         public bool IsHidden { get; set; }
     }

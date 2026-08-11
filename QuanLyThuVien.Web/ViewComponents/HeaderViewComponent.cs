@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Data;
+using QuanLyThuVien.Web.Entities.Identity;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.ViewComponents
@@ -47,7 +47,7 @@ namespace QuanLyThuVien.Web.ViewComponents
                         model.IsReader = true;
                     }
 
-                    // MỚI: Đếm trực tiếp số lượng giỏ hàng thông qua UserId (ApplicationUser.Id)
+                    // Đếm trực tiếp số lượng giỏ hàng thông qua UserId (ApplicationUser.Id)
                     // Áp dụng chung cho cả Khách, Thủ thư lẫn Admin (vì ai cũng có thể có giỏ hàng)
                     // Tính TỔNG số lượng sách trong giỏ hàng (Cộng dồn cột Quantity)
                     // Lấy danh sách cột Quantity của user này về dạng List rồi dùng hàm Sum() mặc định của C#

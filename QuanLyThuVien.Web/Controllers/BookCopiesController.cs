@@ -2,9 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Entities;
 using QuanLyThuVien.Web.Enums;
-using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
@@ -33,8 +33,7 @@ namespace QuanLyThuVien.Web.Controllers
                 .Where(c => c.BookId == bookId)
                 .AsQueryable();
 
-            // 2. PHẦN SỬA LỖI: Phân quyền hiển thị
-            // Nếu KHÔNG phải Admin (tức là Thủ thư), thì chỉ cho phép nhìn thấy các bản sao đang Hoạt động (IsActive == true)
+            // Nếu không phải admin mà là thủ thư thì chỉ hiển thị các bản sao đang hoạt động
             if (!User.IsInRole("Admin"))
             {
                 query = query.Where(c => c.IsActive == true);
@@ -65,20 +64,20 @@ namespace QuanLyThuVien.Web.Controllers
             return View(model);
         }
 
-        // Lưu bản sao (Dùng cho cả Thêm mới bởi Admin và Cập nhật bởi Admin/Thủ thư)
+        // Lưu bản sao
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveCopy(int id, int bookId, string copyCode, int shelfTierId, BookCopyStatus status, bool isReferenceOnly)
         {
-            // 1. Kiểm tra dữ liệu đầu vào cơ bản
+            // Kiểm tra dữ liệu đầu vào 
             if (string.IsNullOrWhiteSpace(copyCode))
-                return Json(new { success = false, message = "Mã bản sao cá biệt không được để trống." });
+                return Json(new { success = false, message = "Mã bản sao  không được để trống." });
 
-            // CHỐT CHẶN MỚI: Bắt buộc phải có Tầng kệ hợp lệ
+            // Bắt buộc phải có Tầng kệ hợp lệ
             if (shelfTierId <= 0)
                 return Json(new { success = false, message = "Vui lòng chọn Vị trí (Kệ và Tầng) hợp lệ." });
 
-            // 2. Kiểm tra trùng mã vạch
+            // Kiểm tra trùng mã vạch
             bool isExist = await _context.BookCopies.AnyAsync(c => c.CopyCode == copyCode && c.Id != id);
             if (isExist)
                 return Json(new { success = false, message = "Mã bản sao này đã tồn tại trong hệ thống. Vui lòng nhập mã khác." });
@@ -96,7 +95,6 @@ namespace QuanLyThuVien.Web.Controllers
                     copy.IsReferenceOnly = isReferenceOnly;
                 }
 
-                // Đã qua kiểm tra shelfTierId > 0 nên gán an toàn tuyệt đối
                 copy.ShelfTierId = shelfTierId;
                 copy.Status = status;
 
@@ -104,7 +102,7 @@ namespace QuanLyThuVien.Web.Controllers
             }
             else
             {
-                // THÊM MỚI (Chỉ Admin)
+                //thêm mới chỉ admin mới có quyền thêm bản sao mới
                 if (!User.IsInRole("Admin"))
                     return Json(new { success = false, message = "Chỉ Admin mới có quyền thêm bản sao mới." });
 

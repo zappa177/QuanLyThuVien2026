@@ -20,7 +20,7 @@ namespace QuanLyThuVien.Web.Controllers
             _userManager = userManager;
         }
 
-        // 2. THÊM HÀM MỚI NÀY VÀO VỊ TRÍ ĐÓ:
+
         [HttpGet]
         public async Task<IActionResult> Index()
         {
@@ -29,14 +29,14 @@ namespace QuanLyThuVien.Web.Controllers
 
             var cartItems = await _context.CartItems
                 .Include(c => c.Book)
-                .Include(c => c.User) // Nạp thông tin người dùng để lấy Username hiển thị
+                .Include(c => c.User)
                 .Where(c => c.UserId == user.Id)
                 .ToListAsync();
 
             return View(cartItems);
         }
 
-        // XÓA SẢN PHẨM KHỎI GIỎ 
+        // xóa sản phẩm khỏi giỏ hàng
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> RemoveItem(int id)
@@ -52,7 +52,7 @@ namespace QuanLyThuVien.Web.Controllers
             return Json(new { success = false, message = "Không tìm thấy dữ liệu giỏ hàng cần xóa." });
         }
 
-        // Tạo phiếu mượn (Pending) và làm sạch giỏ hàng
+        // Tạo phiếu mượn (trạng thái phiếu pending) và làm sạch giỏ hàng
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> CreateTicket(string? targetUsername)
@@ -82,7 +82,7 @@ namespace QuanLyThuVien.Web.Controllers
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. Tạo phiếu mượn ở trạng thái Pending
+                // Tạo phiếu mượn ở trạng thái Pending
                 var ticket = new BorrowTickets
                 {
                     UserId = targetUser.Id,
@@ -95,7 +95,7 @@ namespace QuanLyThuVien.Web.Controllers
                 _context.BorrowTickets.Add(ticket);
                 await _context.SaveChangesAsync();
 
-                // 2. QUAN TRỌNG: Duyệt giỏ hàng, nếu số lượng > 1 thì tách thành các dòng chi tiết riêng lẻ
+                // Duyệt giỏ hàng
                 foreach (var cart in cartItems)
                 {
                     for (int i = 0; i < cart.Quantity; i++)
@@ -104,13 +104,13 @@ namespace QuanLyThuVien.Web.Controllers
                         {
                             BorrowTicketId = ticket.Id,
                             BookId = cart.BookId,
-                            BookCopyId = null // Ban đầu để trống, chờ Thủ thư ra quầy gán bản sao vật lý
+                            BookCopyId = null // Ban đầu để trống, chờ Thủ thư gán mã bản sao vật lý
                         });
                     }
                 }
                 await _context.SaveChangesAsync();
 
-                // 3. Xóa sạch giỏ hàng sau khi đặt thành công
+                //Xóa sạch giỏ hàng sau khi đặt thành công
                 _context.CartItems.RemoveRange(cartItems);
                 await _context.SaveChangesAsync();
 
@@ -121,7 +121,7 @@ namespace QuanLyThuVien.Web.Controllers
             {
                 await transaction.RollbackAsync();
 
-                // ĐÀO SÂU VÀO LỖI THẬT SỰ CỦA SQL SERVER ĐỂ BÁO LÊN MÀN HÌNH
+                // Báo lỗi
                 string errorMsg = ex.InnerException != null ? ex.InnerException.Message : ex.Message;
 
                 return Json(new { success = false, message = "Lỗi hệ thống: " + errorMsg });

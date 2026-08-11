@@ -5,13 +5,13 @@
 <!-- dành cho admin -->
 @if (User.IsInRole("Admin"))
 {
-    <!-- Modal Bootstrap 5 -->
+    <!-- Modal -->
     <div class="modal fade" id="addBookModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0" style="background-color: #f4f4f4;">
                 <div class="modal-body p-4 position-relative">
 
-                    <!-- Nút Xtắt Modal -->
+                    <!-- Nút X tắt Modal -->
                     <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
 
                     <form id="addBookForm" enctype="multipart/form-data">

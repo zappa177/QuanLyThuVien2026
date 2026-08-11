@@ -12,10 +12,10 @@ namespace QuanLyThuVien.Web.Models
 
         public string? PhoneNumber { get; set; }
 
-        // Mã người dùng (Mã thẻ / Mã sinh viên / Mã nhân viên)
+        // Mã người dùng
         public string? UserCode { get; set; }
 
-        // Thay vì ClassName riêng cho Reader, dùng Position chung cho mọi Role (Sinh viên, Giảng viên, Thủ thư...)
+        // Thay vì ClassName riêng cho Reader, dùng Position chung cho mọi Role 
         public string? Position { get; set; }
     }
 }

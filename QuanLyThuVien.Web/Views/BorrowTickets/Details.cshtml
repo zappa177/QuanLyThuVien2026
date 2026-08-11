@@ -146,7 +146,7 @@
             var ticketId = $('#ticketId').val();
             var token = $('input[name="__RequestVerificationToken"]').val();
 
-            // 1. KIỂM TRA TỒN KHO & DUYỆT
+            // kiểm tra tồn kho và hiển thị nút duyệt phiếu nếu đủ
             $('#btnCheckInventory').click(function() {
                 var btn = $(this);
                 btn.prop('disabled', true).text('Đang kiểm tra...');
@@ -169,7 +169,7 @@
                 });
             });
 
-            // XÓA BỚT SÁCH (KHI PENDING LỖI TỒN KHO)
+            // xóa sách khi kiểm tra tồn kho thiếu
             $('.btn-remove-book').click(function() {
                 var bookId = $(this).data('book-id');
                 var removeAll = $(this).data('remove-all');
@@ -179,7 +179,7 @@
                 });
             });
 
-            // 2. QUÉT MÃ GIAO SÁCH
+            // quét mã giao sách
             $('.issue-scanner').keypress(function(e) {
                 if (e.which == 13) {
                     e.preventDefault();
@@ -214,7 +214,7 @@
                 }
             });
 
-            // LƯU MÃ VÀ ĐƯA SÁCH VÀO ONHOLD
+            // lưu mã và chuyển sách sang onHold
             $('#btnSaveScanned').click(function() {
                 var allScannedCodes = [];
                 $('.issue-codes-result').each(function() {
@@ -226,7 +226,7 @@
                 });
             });
 
-            // 3. GIAO SÁCH CHO KHÁCH
+            // giao sách
             $('#btnConfirmHandover').click(function() {
                 $(this).prop('disabled', true).text('Đang xử lý...');
                 $.post('/BorrowTickets/ConfirmHandover', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
@@ -234,7 +234,7 @@
                 });
             });
 
-            // 4. QUÉT MÃ THU HỒI
+            // quét mã thu hôi sách
             $('.return-scanner').keypress(function(e) {
                 if (e.which == 13) {
                     e.preventDefault();

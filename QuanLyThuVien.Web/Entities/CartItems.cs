@@ -14,7 +14,7 @@ namespace QuanLyThuVien.Web.Entities
 
         [Required]
         public int BookId { get; set; } // Tựa sách được thêm vào giỏ
-        // BẠN THÊM THUỘC TÍNH NÀY VÀO ĐÂY
+
         [Required]
         public int Quantity { get; set; } = 1;
 

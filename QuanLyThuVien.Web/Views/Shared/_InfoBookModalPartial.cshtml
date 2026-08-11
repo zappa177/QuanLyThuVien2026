@@ -17,7 +17,7 @@
                 <div class="row mb-2"><label class="col-5 text-end mb-0 text-muted">Năm XB :</label><div class="col-7 fw-bold" id="infoYear"></div></div>
                 <div class="row mb-2"><label class="col-5 text-end mb-0 text-muted">Nhà XB :</label><div class="col-7 fw-bold" id="infoPublisher"></div></div>
 
-                <!-- PHẦN MỚI: Hiển thị số lượng theo chuẩn ERD mới -->
+                <!-- Hiển thị số lượng -->
                 <hr class="my-2 text-muted" />
                 <div class="row mb-2">
                     <label class="col-5 text-end mb-0 text-dark fw-bold">Tổng số bản sao :</label>
@@ -32,12 +32,12 @@
                     <img id="infoImage" src="" style="width: 80%; height: 200px; object-fit: contain; border: 1px dashed #ccc;" />
                 </div>
 
-                <!-- CÁC NÚT PHÂN QUYỀN THEO ROLE (ĐÃ CHUẨN HÓA) -->
+                <!-- CÁC NÚT PHÂN QUYỀN THEO ROLE  -->
                 <div class="text-center mt-4 mb-3">
 
                     @if (User.IsInRole("Admin"))
                     {
-                        <!-- 1. CÁC NÚT DÀNH RIÊNG CHO ADMIN -->
+                        <!-- CÁC NÚT DÀNH RIÊNG CHO ADMIN -->
                         <div class="d-flex justify-content-center gap-2">
                             <a href="#" id="btnManageCopies" class="btn btn-primary px-3 py-2 rounded-0 border-0">Quản lý bản sao</a>
                             <button type="button" class="btn btn-warning px-3 py-2 rounded-0 border-0" id="btnOpenEdit">Chỉnh sửa</button>
@@ -46,7 +46,7 @@
                     }
                     else if (User.IsInRole("Librarian") || User.IsInRole("Reader"))
                     {
-                        <!-- 2. CÁC NÚT DÀNH CHO THỦ THƯ VÀ KHÁCH -->
+                        <!-- CÁC NÚT DÀNH CHO THỦ THƯ VÀ KHÁCH -->
                         <div class="d-flex justify-content-center align-items-center gap-2 mb-3">
                             <label class="fw-bold mb-0">Số lượng:</label>
                             <!-- Ô nhập số lượng mượn -->

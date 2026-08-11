@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Routing; // <-- DÙNG THƯ VIỆN NÀY ĐỂ ĐỌC ANONYMOUS TYPE
+using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using QuanLyThuVien.Web.Controllers;
@@ -27,9 +27,7 @@ namespace QuanLyThuVien.Test.Controllers
             return new Mock<UserManager<ApplicationUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!, null!);
         }
 
-        // =========================================================================
-        // [UTC-CART-01]
-        // =========================================================================
+        //UTC-CART-01
         [Fact]
         public async Task AddToCartDb_UTC_CART_01_UserNotLoggedIn_ReturnsFalse()
         {
@@ -52,20 +50,20 @@ namespace QuanLyThuVien.Test.Controllers
             Assert.False(isSuccess);
             Assert.Equal("Vui lòng đăng nhập để thêm sách vào giỏ hàng!", message);
         }
-        // =========================================================================
-        // [UTC-CART-02]
-        // =========================================================================
+
+        // UTC-CART-02
+
         [Fact]
         public async Task AddToCartDb_UTC_CART_02_BookNotFoundOrInactive_ReturnsFalse()
         {
             var context = GetInMemoryDbContext();
 
-            // BƯỚC 1: Thêm sách vào (DbContext sẽ tự động ép IsActive = true do trạng thái Added)
+            // Thêm sách vào (DbContext sẽ tự động ép IsActive = true do trạng thái Added)
             var book = new Books { Id = 99, Title = "Sách Khóa", Author = "TG", CategoryId = 1 };
             context.Books.Add(book);
             await context.SaveChangesAsync();
 
-            // BƯỚC 2: Cập nhật lại sách thành IsActive = false
+            // Cập nhật lại sách thành IsActive = false
             // (Trạng thái Modified không bị DbContext ghi đè IsActive)
             book.IsActive = false;
             context.Books.Update(book);
@@ -90,9 +88,9 @@ namespace QuanLyThuVien.Test.Controllers
             Assert.Equal("Sách không tồn tại hoặc đã ngừng hoạt động.", message);
         }
 
-        // =========================================================================
-        // [UTC-CART-03]
-        // =========================================================================
+
+        // UTC-CART-03
+
         [Fact]
         public async Task AddToCartDb_UTC_CART_03_NewBook_AddsToCartAndReturnsTrue()
         {
@@ -123,9 +121,9 @@ namespace QuanLyThuVien.Test.Controllers
             Assert.Equal(2, cartItemInDb.Quantity);
         }
 
-        // =========================================================================
-        // [UTC-CART-04]
-        // =========================================================================
+
+        // UTC-CART-04
+
         [Fact]
         public async Task AddToCartDb_UTC_CART_04_ExistingBook_IncreasesQuantity()
         {

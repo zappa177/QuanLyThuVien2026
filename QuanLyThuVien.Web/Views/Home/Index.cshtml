@@ -94,16 +94,6 @@
                             <p class="card-text mb-1" style="font-size: 0.9rem;">Năm xuất bản : @book.PublishYear</p>
                             <p class="card-text mb-0" style="font-size: 0.9rem;">Thể loại : @(book.Category?.Name ?? "")</p>
 
-                            @* <!-- chỉ khách và thủ thư hiện icon giỏ hàng ở card book-->
-                            @if (!User.IsInRole("Admin") && (User.IsInRole("Reader") || User.IsInRole("Librarian")))
-                            {
-                                <button type="button" class="btn btn-link text-dark position-absolute p-0"
-                                        style="bottom: 15px; right: 20px; font-size: 1.6rem;"
-                                        title="Thêm vào giỏ mượn"
-                                        onclick="event.stopPropagation(); addToCart(@book.Id, '@book.Title', '@book.CoverImage')">
-                                    <i class="fa-solid fa-cart-plus"></i>
-                                </button>
-                            } *@
                         </div>
                     </div>
                 </div>
@@ -149,7 +139,7 @@
 }
 
 
-<!-- ================= SCRIPTS ================= -->
+
 @section Scripts {
     
     <script>
@@ -307,29 +297,4 @@
 
     </script>
 
-    <!-- THẺ SCRIPT 2: Logic giỏ hàng (Chỉ load nếu đúng Role) -->
-    @if (User.Identity!.IsAuthenticated && (User.IsInRole("Librarian") || User.IsInRole("Reader")))
-    {
-        <script>
-            @* $(document).ready(function() {
-                $.get('/Home/GetCartItemCount', function (count) {
-                    updateCartBadge(count);
-                }).fail(function() {
-                    console.warn("Không thể lấy số lượng giỏ hàng.");
-                });
-            }); *@
-            @* hàm này *@
-            @* function updateCartBadge(count) {
-                let badge = $('#cartItemCountBadge');
-                if (badge.length > 0) {
-                    badge.text(count);
-                    if (count > 0) {
-                        badge.css('display', 'inline-block');
-                    } else {
-                        badge.css('display', 'none');
-                    }
-                }
-            } *@
-        </script>
-    }
 }
