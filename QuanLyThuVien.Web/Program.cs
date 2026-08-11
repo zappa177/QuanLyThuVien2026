@@ -5,19 +5,15 @@ using QuanLyThuVien.Web.Entities.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Thêm In-Memory Cache (Thay thế Redis Cache)
+// In-Memory Cache 
 builder.Services.AddMemoryCache();
 
-// 2. Bộ Logger mặc định của ASP.NET Core đã được tự động thêm vào thông qua WebApplication.CreateBuilder
-// Bạn không cần phải cấu hình Serilog phức tạp nữa.
-
-
-// 4. Đăng ký DbContext
+// Đăng ký DbContext
 builder.Services.AddDbContext<ApplicationDbContext>(option =>
     option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
 
-// 5. Identity
+// đăng ký Identity
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(option =>
 {
     option.Password.RequiredLength = 4;
@@ -43,7 +39,7 @@ builder.Services.ConfigureApplicationCookie(option =>
     //option.Cookie.IsEssential = true; //lưu cookie để xác thực
 });
 
-// 6. MVC
+//add controllers with views
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
@@ -65,7 +61,7 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Account}/{action=Login}/{id?}");
 
-// 7. Seed Admin Data (Sử dụng ILogger mặc định)
+// Seed Admin Data
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;

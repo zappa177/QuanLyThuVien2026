@@ -1,4 +1,6 @@
-﻿@if (TempData["SuccessMessage"] != null)
+﻿@* _NotificationPartial *@
+
+@if (TempData["SuccessMessage"] != null)
 {
     <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
         <i class="fa-solid fa-check-circle me-2"></i><strong>Thành công!</strong> @TempData["SuccessMessage"]

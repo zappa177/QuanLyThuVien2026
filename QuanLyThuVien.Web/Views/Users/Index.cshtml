@@ -1,4 +1,6 @@
-﻿@model IEnumerable<QuanLyThuVien.Web.Models.UserListViewModel>
+﻿@* /user/index *@
+
+@model IEnumerable<QuanLyThuVien.Web.Models.UserListViewModel>
 
 @{
     ViewData["Title"] = "Quản lý người dùng";
@@ -25,7 +27,7 @@
         </button>
     </div>
 
-    <!-- Form Tìm kiếm & Sắp xếp (Chuẩn Responsive xếp tầng) -->
+    <!-- Form Tìm kiếm & Sắp xếp -->
     <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-end">
         <div class="col-12 col-md-3">
             <label class="fw-bold mb-1">Tên người dùng :</label>
@@ -94,7 +96,7 @@
     </div>
 </div>
 
-<!-- MODAL THÊM NGƯỜI DÙNG -->
+<!-- MODAL thêm người dùng-->
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
@@ -147,7 +149,7 @@
     </div>
 </div>
 
-<!-- MODAL CHỈNH SỬA NGƯỜI DÙNG -->
+<!-- MODAL chỉnh sửa người dùng -->
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">

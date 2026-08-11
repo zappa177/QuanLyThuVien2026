@@ -93,7 +93,6 @@ namespace QuanLyThuVien.Web.Controllers
 
         // lấy chi tiết sách
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetBookDetails(int id)
         {
             var book = await _context.Books

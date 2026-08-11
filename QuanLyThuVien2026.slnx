@@ -3,7 +3,6 @@
     <Project Path="QuanLyThuVien.Web/QuanLyThuVien.Web.csproj" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="QuanLyThuVien.NUnitTests/QuanLyThuVien.NUnitTests.csproj" Id="0740c39c-dc45-40d3-bd7c-7453b5317685" />
     <Project Path="QuanLyThuVien.Test/QuanLyThuVien.Tests.csproj" />
   </Folder>
 </Solution>

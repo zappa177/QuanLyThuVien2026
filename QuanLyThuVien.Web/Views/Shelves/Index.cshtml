@@ -1,4 +1,6 @@
-﻿@model IEnumerable<QuanLyThuVien.Web.Entities.Shelves>
+﻿@* /shelves/Index.cshtml *@
+
+@model IEnumerable<QuanLyThuVien.Web.Entities.Shelves>
 
 @{
     ViewData["Title"] = "Quản lý tầng kệ sách";
@@ -27,7 +29,7 @@
         </button>
     </div>
 
-    <!-- Form Tìm kiếm (Chuẩn Responsive) -->
+    <!-- Form Tìm kiếm  -->
     <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
         <div class="col-12 col-md-auto">
             <label class="fw-bold mb-0">Tên kệ :</label>
