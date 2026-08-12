@@ -162,103 +162,150 @@
 
 @section Scripts {
     <script>
-        // Load Tier khi đổi Kệ (Sử dụng lại API GetAvailableTiers có sẵn ở HomeController)
-        $('#shelfSelect').change(function() {
-            var shelfId = $(this).val();
-            var tierSelect = $('#tierSelect');
-            tierSelect.empty().append('<option value="">-- Đang tải... --</option>');
-            if (shelfId) {
-                $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
-                    tierSelect.empty();
-                    if(data.length > 0) {
-                        tierSelect.append('<option value="">-- Chọn tầng --</option>');
-                        $.each(data, function(i, t) {
-                            tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
-                        });
-                        tierSelect.prop('disabled', false);
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // Load Tier khi đổi Kệ (Sử dụng GetAvailableTiers ở HomeController)
+            const shelfSelect = document.getElementById('shelfSelect');
+            if (shelfSelect) {
+                shelfSelect.addEventListener('change', function() {
+                    const shelfId = this.value;
+                    const tierSelect = document.getElementById('tierSelect');
+                    
+                    tierSelect.innerHTML = '<option value="">-- Đang tải... --</option>';
+                    
+                    if (shelfId) {
+                        fetch('/Home/GetAvailableTiers?shelfId=' + encodeURIComponent(shelfId))
+                            .then(response => response.json())
+                            .then(data => {
+                                tierSelect.innerHTML = '';
+                                if (data.length > 0) {
+                                    tierSelect.insertAdjacentHTML('beforeend', '<option value="">-- Chọn tầng --</option>');
+                                    data.forEach(function(t) {
+                                        tierSelect.insertAdjacentHTML('beforeend', '<option value="' + t.id + '">' + t.tierName + '</option>');
+                                    });
+                                    tierSelect.disabled = false;
+                                } else {
+                                    tierSelect.insertAdjacentHTML('beforeend', '<option value="">-- Kệ đã đầy --</option>');
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
                     } else {
-                        tierSelect.append('<option value="">-- Kệ đã đầy --</option>');
+                        tierSelect.disabled = true;
+                        tierSelect.innerHTML = '<option value="">-- Chọn kệ trước --</option>';
                     }
                 });
-            } else {
-                tierSelect.prop('disabled', true).empty().append('<option value="">-- Chọn kệ trước --</option>');
+            }
+
+            // Xử lý Submit Form
+            const copyForm = document.getElementById('copyForm');
+            if (copyForm) {
+                copyForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const tierSelect = document.getElementById('tierSelect');
+                    const isReferenceOnly = document.getElementById('IsReferenceOnly');
+
+                    // Gỡ bỏ tạm thời các thuộc tính disabled 
+                    // để FormData có thể gom được toàn bộ dữ liệu (ShelfTierId, IsReferenceOnly...)
+                    tierSelect.disabled = false;
+                    isReferenceOnly.disabled = false;
+
+                    // Chốt chặn Validation ở phía Client (Trình duyệt)
+                    const tierId = tierSelect.value;
+                    if (!tierId || tierId == "0") {
+                        alert("Vui lòng chọn Kệ và Tầng hợp lệ trước khi lưu!");
+                        return; // Dừng lại, không gửi lên Server nữa
+                    }
+
+                    // Gom dữ liệu và gửi đi (Sử dụng URLSearchParams để mô phỏng jQuery .serialize())
+                    const formData = new URLSearchParams(new FormData(this)).toString();
+                    
+                    fetch('/BookCopies/SaveCopy', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(res => {
+                        if(res.success) {
+                            alert(res.message);
+                            location.reload();
+                        } else {
+                            alert("Lỗi: " + res.message);
+                        }
+                    })
+                    .catch(error => console.error('Error:', error));
+                });
             }
         });
 
         // Hàm Reset và Mở Modal Thêm mới (Admin)
         function openAddCopyModal() {
-            $('#copyModalTitle').text('Nhập thêm bản sao vật lý');
-            $('#CopyId').val(0);
-            $('#CopyCode').val('');
-            $('#shelfSelect').val('');
-            $('#tierSelect').empty().append('<option value="">-- Chọn kệ trước --</option>').prop('disabled', true);
-            $('#Status').val('0'); // Mặc định là Available
-            $('#IsReferenceOnly').prop('checked', false);
+            document.getElementById('copyModalTitle').textContent = 'Nhập thêm bản sao vật lý';
+            document.getElementById('CopyId').value = 0;
+            document.getElementById('CopyCode').value = '';
+            document.getElementById('shelfSelect').value = '';
+            
+            const tierSelect = document.getElementById('tierSelect');
+            tierSelect.innerHTML = '<option value="">-- Chọn kệ trước --</option>';
+            tierSelect.disabled = true;
+            
+            document.getElementById('Status').value = '0'; // Mặc định là Available
+            document.getElementById('IsReferenceOnly').checked = false;
 
             new bootstrap.Modal(document.getElementById('copyModal')).show();
         }
 
         // Hàm Mở Modal Chỉnh sửa (Cả Admin và Thủ thư)
         function openEditCopyModal(id, copyCode, shelfId, tierId, statusId, isReferenceOnly) {
-            $('#copyModalTitle').text('Cập nhật Bản sao: ' + copyCode);
-            $('#CopyId').val(id);
-            $('#CopyCode').val(copyCode);
-            $('#Status').val(statusId);
-            $('#IsReferenceOnly').prop('checked', isReferenceOnly);
+            document.getElementById('copyModalTitle').textContent = 'Cập nhật Bản sao: ' + copyCode;
+            document.getElementById('CopyId').value = id;
+            document.getElementById('CopyCode').value = copyCode;
+            document.getElementById('Status').value = statusId;
+            document.getElementById('IsReferenceOnly').checked = isReferenceOnly;
 
             // Set Kệ và Tầng
-            $('#shelfSelect').val(shelfId);
-            var tierSelect = $('#tierSelect');
-            tierSelect.empty().append('<option value="">-- Đang tải... --</option>');
+            document.getElementById('shelfSelect').value = shelfId;
+            
+            const tierSelect = document.getElementById('tierSelect');
+            tierSelect.innerHTML = '<option value="">-- Đang tải... --</option>';
 
-            $.get('/Home/GetAvailableTiers', { shelfId: shelfId }, function(data) {
-                tierSelect.empty();
-                $.each(data, function(i, t) {
-                    tierSelect.append('<option value="' + t.id + '">' + t.tierName + '</option>');
-                });
-                tierSelect.val(tierId); // Trỏ đúng tầng đang lưu
-                tierSelect.prop('disabled', false);
-            });
+            fetch('/Home/GetAvailableTiers?shelfId=' + encodeURIComponent(shelfId))
+                .then(response => response.json())
+                .then(data => {
+                    tierSelect.innerHTML = '';
+                    data.forEach(function(t) {
+                        tierSelect.insertAdjacentHTML('beforeend', '<option value="' + t.id + '">' + t.tierName + '</option>');
+                    });
+                    tierSelect.value = tierId; // Trỏ đúng tầng đang lưu
+                    tierSelect.disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
 
             new bootstrap.Modal(document.getElementById('copyModal')).show();
         }
 
-        // Xử lý Submit Form
-        $('#copyForm').submit(function(e) {
-            e.preventDefault();
-
-            //Gỡ bỏ tạm thời các thuộc tính disabled 
-            // để hàm serialize() của jQuery có thể gom được toàn bộ dữ liệu (ShelfTierId, IsReferenceOnly...)
-            $('#tierSelect').prop('disabled', false);
-            $('#IsReferenceOnly').prop('disabled', false);
-
-            // Chốt chặn Validation ở phía Client (Trình duyệt)
-            var tierId = $('#tierSelect').val();
-            if (!tierId || tierId == "0") {
-                alert("Vui lòng chọn Kệ và Tầng hợp lệ trước khi lưu!");
-                return; // Dừng lại, không gửi lên Server nữa
-            }
-
-            // Gom dữ liệu và gửi đi
-            var formData = $(this).serialize();
-            
-            $.post('/BookCopies/SaveCopy', formData, function(res) {
-                if(res.success) {
-                    alert(res.message);
-                    location.reload();
-                } else {
-                    alert("Lỗi: " + res.message);
-                }
-            });
-        });
-
         // Xử lý nút Ẩn/Hiện (Admin)
         function toggleCopyStatus(id) {
             if(confirm('Bạn có chắc chắn muốn thay đổi trạng thái hoạt động của cuốn sách này?')) {
-                $.post('/BookCopies/ToggleStatus', { id: id }, function(res) {
-                    if(res.success) location.reload();
-                    else alert("Lỗi: " + res.message);
-                });
+                fetch('/BookCopies/ToggleStatus', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: new URLSearchParams({ id: id }).toString()
+                })
+                .then(response => response.json())
+                .then(res => {
+                    if(res.success) {
+                        location.reload();
+                    } else {
+                        alert("Lỗi: " + res.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
             }
         }
     </script>

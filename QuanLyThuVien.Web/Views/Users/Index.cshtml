@@ -198,18 +198,39 @@
 
 @section Scripts {
     <script>
-        $('.btn-edit').click(function () {
-            var id = $(this).data('id');
-            var role = $(this).data('role');
-            var userCode = $(this).data('usercode');
-            var position = $(this).data('position');
+        document.addEventListener('DOMContentLoaded', function() {
+            // - querySelectorAll để lấy các các nút edit trên trang
+                    const editButtons = document.querySelectorAll('.btn-edit');
 
-            $('#editUserId').val(id);
-            $('#editRoleSelect').val(role).trigger('change');
-            $('#editUserCodeInput').val(userCode);
-            $('#editPositionInput').val(position);
+                // Lặp qua từng nút và gắn sự kiện click
+                editButtons.forEach(function(button) {
+                    button.addEventListener('click', function() {
 
-            new bootstrap.Modal(document.getElementById('editUserModal')).show();
+                        // Lấy dữ liệu của đúng dòng được bấm
+                        const id = this.getAttribute('data-id');
+                        const role = this.getAttribute('data-role');
+                        const userCode = this.getAttribute('data-usercode');
+                        const position = this.getAttribute('data-position');
+
+                        // Gán vào form trong Modal
+                        document.getElementById('editUserId').value = id;
+
+                        const editRoleSelect = document.getElementById('editRoleSelect');
+                        if (editRoleSelect) {
+                            editRoleSelect.value = role;
+                            editRoleSelect.dispatchEvent(new Event('change'));
+                        }
+
+                        document.getElementById('editUserCodeInput').value = userCode;
+                        document.getElementById('editPositionInput').value = position;
+
+                        // Mở Modal
+                        const modalElement = document.getElementById('editUserModal');
+                        const modal = bootstrap.Modal.getInstance(modalElement) || new bootstrap.Modal(modalElement);
+                        modal.show();
+                    });
+                });
+
         });
     </script>
 }

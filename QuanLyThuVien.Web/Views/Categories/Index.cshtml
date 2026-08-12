@@ -102,33 +102,77 @@
 
 @section Scripts {
     <script>
+        // Hàm reset form và mở modal Thêm mới
         function openAddModal() {
-            $('#CategoryId').val(0);
-            $('#CategoryName').val('');
-            $('#modalTitle').text('Thêm thể loại');
+            document.getElementById('CategoryId').value = 0;
+            document.getElementById('CategoryName').value = '';
+            document.getElementById('modalTitle').textContent = 'Thêm thể loại';
+
+            // Sử dụng Bootstrap 5 Modal API
             new bootstrap.Modal(document.getElementById('categoryModal')).show();
         }
 
+        // Hàm đổ dữ liệu và mở modal Chỉnh sửa
         function openEditModal(id, name) {
-            $('#CategoryId').val(id);
-            $('#CategoryName').val(name);
-            $('#modalTitle').text('Chỉnh sửa thể loại');
+            document.getElementById('CategoryId').value = id;
+            document.getElementById('CategoryName').value = name;
+            document.getElementById('modalTitle').textContent = 'Chỉnh sửa thể loại';
+
+            // Sử dụng Bootstrap 5 Modal API
             new bootstrap.Modal(document.getElementById('categoryModal')).show();
         }
 
-        $('#categoryForm').submit(function(e) {
-            e.preventDefault();
-            $.post('/Categories/SaveCategory', $(this).serialize(), function(response) {
-                if (response.success) location.reload();
-                else alert(response.message);
-            });
-        });
-
+        // Thay đổi trạng thái (Ẩn/Hiện)
         function toggleStatus(id) {
-            $.post('/Categories/ToggleCategoryStatus', { id: id }, function(response) {
-                if (response.success) location.reload();
-                else alert(response.message);
-            });
+            fetch('/Categories/ToggleCategoryStatus', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                // Gom dữ liệu id để gửi đi
+                body: new URLSearchParams({ id: id }).toString()
+            })
+                .then(response => response.json())
+                .then(response => {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
+
+        // Đảm bảo DOM đã tải xong trước khi gắn sự kiện
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Xử lý Submit Form
+            const categoryForm = document.getElementById('categoryForm');
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', function(e) {
+                    e.preventDefault(); // Ngăn chặn hành vi submit mặc định của form
+
+                    // Gom toàn bộ dữ liệu trong form (tương đương $(this).serialize())
+                    const formData = new URLSearchParams(new FormData(this)).toString();
+
+                    fetch('/Categories/SaveCategory', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(response => {
+                            if (response.success) {
+                                location.reload();
+                            } else {
+                                alert(response.message);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                });
+            }
+        });
     </script>
 }

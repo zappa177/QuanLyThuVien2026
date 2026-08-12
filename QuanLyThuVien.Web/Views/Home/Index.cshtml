@@ -141,160 +141,263 @@
 
 
 @section Scripts {
-    
     <script>
-       
+        document.addEventListener('DOMContentLoaded', function() {
 
-        $(document).ready(function() {
             // chỉnh sửa ảnh
-            $('#imagePreviewContainer').click(function() { $('#imageInput').click(); });
-            $('#imageInput').change(function() {
-                const file = this.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        $('#imagePreview').attr('src', e.target.result).show();
-                        $('#imagePreviewContainer').css('background', 'none');
-                    }
-                    reader.readAsDataURL(file);
-                }
-            });
+            const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+            const imageInput = document.getElementById('imageInput');
 
-            $('#editImagePreviewContainer').click(function() { $('#editImageInput').click(); });
-            $('#editImageInput').change(function() {
-                const file = this.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) { $('#editImagePreview').attr('src', e.target.result); }
-                    reader.readAsDataURL(file);
-                }
-            });
+            if (imagePreviewContainer && imageInput) {
+                imagePreviewContainer.addEventListener('click', function() {
+                    imageInput.click();
+                });
+
+                imageInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const imagePreview = document.getElementById('imagePreview');
+                            imagePreview.src = e.target.result;
+                            imagePreview.style.display = 'block'; // Tương đương .show()
+                            imagePreviewContainer.style.background = 'none';
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            const editImagePreviewContainer = document.getElementById('editImagePreviewContainer');
+            const editImageInput = document.getElementById('editImageInput');
+
+            if (editImagePreviewContainer && editImageInput) {
+                editImagePreviewContainer.addEventListener('click', function() {
+                    editImageInput.click();
+                });
+
+                editImageInput.addEventListener('change', function() {
+                    const file = this.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            document.getElementById('editImagePreview').src = e.target.result;
+                        }
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
 
             // thêm sách
-            $('#addBookForm').submit(function(e) {
-                e.preventDefault();
-                var formData = new FormData(this);
-                $('#btnSaveBook').prop('disabled', true).text('Đang lưu...');
-                $.ajax({
-                    url: '/Home/AddBook', type: 'POST', data: formData, processData: false, contentType: false,
-                    success: function(res) {
-                        if (res.success) {
-                            alert("Lưu thành công!"); location.reload();
-                        } else {
-                            alert("Lỗi: " + res.message); $('#btnSaveBook').prop('disabled', false).text('Lưu');
-                        }
-                    }
+            const addBookForm = document.getElementById('addBookForm');
+            if (addBookForm) {
+                addBookForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+
+                    const btnSaveBook = document.getElementById('btnSaveBook');
+                    btnSaveBook.disabled = true;
+                    btnSaveBook.textContent = 'Đang lưu...';
+
+                    fetch('/Home/AddBook', {
+                        method: 'POST',
+                        body: formData // fetch với FormData tự động set content-type là multipart/form-data
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (res.success) {
+                                alert("Lưu thành công!");
+                                location.reload();
+                            } else {
+                                alert("Lỗi: " + res.message);
+                                btnSaveBook.disabled = false;
+                                btnSaveBook.textContent = 'Lưu';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            btnSaveBook.disabled = false;
+                            btnSaveBook.textContent = 'Lưu';
+                        });
                 });
-            });
+            }
+
             // sửa sách
-            $('#editBookForm').submit(function(e) {
-                e.preventDefault();
-                var formData = new FormData(this);
-                $('#btnSaveEditBook').prop('disabled', true).text('Đang lưu...');
-                $.ajax({
-                    url: '/Home/EditBook', type: 'POST', data: formData, processData: false, contentType: false,
-                    success: function(res) {
-                        if (res.success) {
-                            alert("Cập nhật sách thành công!"); location.reload();
-                        } else {
-                            alert("Lỗi: " + res.message); $('#btnSaveEditBook').prop('disabled', false).text('Lưu');
-                        }
-                    }
+            const editBookForm = document.getElementById('editBookForm');
+            if (editBookForm) {
+                editBookForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const formData = new FormData(this);
+
+                    const btnSaveEditBook = document.getElementById('btnSaveEditBook');
+                    btnSaveEditBook.disabled = true;
+                    btnSaveEditBook.textContent = 'Đang lưu...';
+
+                    fetch('/Home/EditBook', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(res => {
+                            if (res.success) {
+                                alert("Cập nhật sách thành công!");
+                                location.reload();
+                            } else {
+                                alert("Lỗi: " + res.message);
+                                btnSaveEditBook.disabled = false;
+                                btnSaveEditBook.textContent = 'Lưu';
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            btnSaveEditBook.disabled = false;
+                            btnSaveEditBook.textContent = 'Lưu';
+                        });
                 });
-            });
+            }
 
             // click vào card mở modal thông tin sách
-            $('.book-item').click(function () {
-                var bookId = $(this).data('id');
-                $.get('/Home/GetBookDetails', { id: bookId }, function (data) {
+            const bookItems = document.querySelectorAll('.book-item');
+            bookItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-id');
 
-                    // 1. Gán thông tin cơ bản
-                    $('#infoBookId').val(data.id);
-                    $('#infoCategory').text(data.categoryName || 'Chưa phân loại');
-                    $('#infoISBN').text(data.isbn);
-                    $('#infoTitle').text(data.title);
-                    $('#infoAuthor').text(data.author);
-                    $('#infoYear').text(data.publishYear);
-                    $('#infoPublisher').text(data.publisher);
-                    $('#infoLocation').text(data.suggestedLocation);
+                    fetch('/Home/GetBookDetails?id=' + encodeURIComponent(bookId))
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
+                        .then(data => {
+                            // 1. Gán thông tin cơ bản
+                            document.getElementById('infoBookId').value = data.id;
+                            document.getElementById('infoCategory').textContent = data.categoryName || 'Chưa phân loại';
+                            document.getElementById('infoISBN').textContent = data.isbn;
+                            document.getElementById('infoTitle').textContent = data.title;
+                            document.getElementById('infoAuthor').textContent = data.author;
+                            document.getElementById('infoYear').textContent = data.publishYear;
+                            document.getElementById('infoPublisher').textContent = data.publisher;
+                            document.getElementById('infoLocation').textContent = data.suggestedLocation;
 
-                    // 2. GÁN THÔNG TIN ERD MỚI (TỔNG SỐ VÀ KHẢ DỤNG)
-                    $('#infoTotalCopies').text(data.totalCopies + ' cuốn');
-                    $('#infoAvailableCopies').text(data.availableCount + ' cuốn');
+                            // 2. GÁN THÔNG TIN ERD MỚI (TỔNG SỐ VÀ KHẢ DỤNG)
+                            document.getElementById('infoTotalCopies').textContent = data.totalCopies + ' cuốn';
+                            document.getElementById('infoAvailableCopies').textContent = data.availableCount + ' cuốn';
 
-                    // Khống chế ô chọn số lượng (Quantity)
-                    var qtyInput = $('#infoQuantity');
-                    if (qtyInput.length > 0) {
-                        qtyInput.attr('max', data.availableCount); // Giới hạn tối đa
-                        if (data.availableCount === 0) {
-                            qtyInput.val(0).prop('disabled', true); // Hết sách thì khóa ô nhập
-                        } else {
-                            qtyInput.val(1).prop('disabled', false); // Còn sách thì cho nhập
-                        }
-                    }
+                            // Khống chế ô chọn số lượng (Quantity)
+                            const qtyInput = document.getElementById('infoQuantity');
+                            if (qtyInput) {
+                                qtyInput.setAttribute('max', data.availableCount); // Giới hạn tối đa
+                                if (data.availableCount === 0) {
+                                    qtyInput.value = 0;
+                                    qtyInput.disabled = true; // Hết sách thì khóa ô nhập
+                                } else {
+                                    qtyInput.value = 1;
+                                    qtyInput.disabled = false; // Còn sách thì cho nhập
+                                }
+                            }
 
-                    // 3. Gán ảnh
-                    var finalImg = data.coverImage ? data.coverImage : '/images/no-cover.png';
-                    $('#infoImage').attr('src', finalImg);
+                            // 3. Gán ảnh
+                            const finalImg = data.coverImage ? data.coverImage : '/images/no-cover.png';
+                            document.getElementById('infoImage').src = finalImg;
 
-                    // 4. Các nút thao tác của Admin / Thủ thư
-                    $('#btnOpenEdit').data('id', data.id);
-                    $('#btnManageCopies').attr('href', '/BookCopies/Index?bookId=' + data.id);
-                    $('#btnUpdateCopiesStatus').attr('href', '/BookCopies/Index?bookId=' + data.id);
+                            // 4. Các nút thao tác của Admin / Thủ thư
+                            const btnOpenEdit = document.getElementById('btnOpenEdit');
+                            if (btnOpenEdit) btnOpenEdit.setAttribute('data-id', data.id);
 
-                    // Nút ẩn hiện
-                    var btnToggle = $('#btnToggleVisibility');
-                    btnToggle.data('id', data.id);
-                    if (data.isActive) {
-                        btnToggle.removeClass('btn-secondary').addClass('btn-danger').text('Ẩn sách').data('action', 'hide');
-                    } else {
-                        btnToggle.removeClass('btn-danger').addClass('btn-secondary').text('Hiện sách').data('action', 'show');
-                    }
+                            const btnManageCopies = document.getElementById('btnManageCopies');
+                            if (btnManageCopies) btnManageCopies.href = '/BookCopies/Index?bookId=' + data.id;
 
-                    // Hiện modal
-                    $('#infoBookModal').modal('show');
-                }).fail(function () {
-                    alert("Lỗi: Không thể lấy dữ liệu từ máy chủ.");
+                            const btnUpdateCopiesStatus = document.getElementById('btnUpdateCopiesStatus');
+                            if (btnUpdateCopiesStatus) btnUpdateCopiesStatus.href = '/BookCopies/Index?bookId=' + data.id;
+
+                            // Nút ẩn hiện
+                            const btnToggle = document.getElementById('btnToggleVisibility');
+                            if (btnToggle) {
+                                btnToggle.setAttribute('data-id', data.id);
+                                if (data.isActive) {
+                                    btnToggle.classList.remove('btn-secondary');
+                                    btnToggle.classList.add('btn-danger');
+                                    btnToggle.textContent = 'Ẩn sách';
+                                    btnToggle.setAttribute('data-action', 'hide');
+                                } else {
+                                    btnToggle.classList.remove('btn-danger');
+                                    btnToggle.classList.add('btn-secondary');
+                                    btnToggle.textContent = 'Hiện sách';
+                                    btnToggle.setAttribute('data-action', 'show');
+                                }
+                            }
+
+                            // Hiện modal (sử dụng Bootstrap 5 API)
+                            const infoBookModal = new bootstrap.Modal(document.getElementById('infoBookModal'));
+                            infoBookModal.show();
+                        })
+                        .catch(error => {
+                            alert("Lỗi: Không thể lấy dữ liệu từ máy chủ.");
+                        });
                 });
             });
+
             //button ẩn hiện sách trong modal thông tin sách
-            $('#btnToggleVisibility').off('click').on('click', function() {
-                var bookId = $(this).data('id');
-                var action = $(this).data('action');
-                var url = action === 'hide' ? '/Home/HideBook' : '/Home/RestoreBook';
-                var confirmMsg = action === 'hide' ? "Bạn có chắc chắn muốn ẨN cuốn sách này?" : "Bạn có chắc chắn muốn HIỆN lại cuốn sách này?";
+            const btnToggleVisibility = document.getElementById('btnToggleVisibility');
+            if (btnToggleVisibility) {
+                // Đảm bảo không bind nhiều lần vì đã nằm trong DOMContentLoaded
+                btnToggleVisibility.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-id');
+                    const action = this.getAttribute('data-action');
+                    const url = action === 'hide' ? '/Home/HideBook' : '/Home/RestoreBook';
+                    const confirmMsg = action === 'hide' ? "Bạn có chắc chắn muốn ẨN cuốn sách này?" : "Bạn có chắc chắn muốn HIỆN lại cuốn sách này?";
 
-                if (confirm(confirmMsg)) {
-                    $.post(url, { id: bookId }, function(res) {
-                        if (res.success) {
-                            alert("Cập nhật trạng thái sách thành công!"); location.reload();
-                        } else {
-                            alert("Lỗi: " + res.message);
-                        }
-                    });
-                }
-            });
-            //button mở modal chỉnh sửa sách
-            $('#btnOpenEdit').click(function() {
-                var bookId = $(this).data('id');
-                $('#infoBookModal').modal('hide');
-
-                $.get('/Home/GetBookDetails', { id: bookId }, function(data) {
-                    $('#editId').val(data.id);
-                    $('#editTitle').val(data.title);
-                    $('#editCategory').val(data.categoryId);
-                    $('#editISBN').val(data.isbn);
-                    $('#editAuthor').val(data.author);
-                    $('#editYear').val(data.publishYear);
-                    $('#editPublisher').val(data.publisher);
-                    $('#editExistingImage').val(data.coverImage);
-                    $('#editImagePreview').attr('src', data.coverImage);
-                    $('#editBookModal').modal('show');
+                    if (confirm(confirmMsg)) {
+                        fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            },
+                            body: new URLSearchParams({ id: bookId }).toString()
+                        })
+                            .then(res => res.json())
+                            .then(res => {
+                                if (res.success) {
+                                    alert("Cập nhật trạng thái sách thành công!");
+                                    location.reload();
+                                } else {
+                                    alert("Lỗi: " + res.message);
+                                }
+                            })
+                            .catch(error => console.error('Error:', error));
+                    }
                 });
-            });
+            }
+
+            //button mở modal chỉnh sửa sách
+            const btnOpenEdit = document.getElementById('btnOpenEdit');
+            if (btnOpenEdit) {
+                btnOpenEdit.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-id');
+
+                    // Ẩn modal info
+                    const infoBookModalEl = document.getElementById('infoBookModal');
+                    const infoModalInstance = bootstrap.Modal.getInstance(infoBookModalEl);
+                    if (infoModalInstance) infoModalInstance.hide();
+
+                    fetch('/Home/GetBookDetails?id=' + encodeURIComponent(bookId))
+                        .then(response => response.json())
+                        .then(data => {
+                            document.getElementById('editId').value = data.id;
+                            document.getElementById('editTitle').value = data.title;
+                            document.getElementById('editCategory').value = data.categoryId;
+                            document.getElementById('editISBN').value = data.isbn;
+                            document.getElementById('editAuthor').value = data.author;
+                            document.getElementById('editYear').value = data.publishYear;
+                            document.getElementById('editPublisher').value = data.publisher;
+                            document.getElementById('editExistingImage').value = data.coverImage;
+                            document.getElementById('editImagePreview').src = data.coverImage;
+
+                            // Hiện modal edit
+                            const editBookModal = new bootstrap.Modal(document.getElementById('editBookModal'));
+                            editBookModal.show();
+                        });
+                });
+            }
         });
-
-
     </script>
-
 }

@@ -142,124 +142,264 @@
 
 @section Scripts {
     <script>
-        $(document).ready(function() {
-            var ticketId = $('#ticketId').val();
-            var token = $('input[name="__RequestVerificationToken"]').val();
+        document.addEventListener('DOMContentLoaded', function() {
+            // Lấy các giá trị cần thiết
+            const ticketIdElement = document.getElementById('ticketId');
+            const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+
+            const ticketId = ticketIdElement ? ticketIdElement.value : '';
+            const token = tokenElement ? tokenElement.value : '';
+
+            // Hàm hỗ trợ để thực hiện POST request
+            function postData(url, data = {}) {
+                const formData = new URLSearchParams();
+                for (const key in data) {
+                    if (Array.isArray(data[key])) {
+                        // Xử lý mảng (ví dụ: scannedCodes) để khớp với ModelBinding của ASP.NET
+                        data[key].forEach(val => formData.append(key, val));
+                    } else {
+                        formData.append(key, data[key]);
+                    }
+                }
+
+                return fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                }).then(res => res.json());
+            }
 
             // kiểm tra tồn kho và hiển thị nút duyệt phiếu nếu đủ
-            $('#btnCheckInventory').click(function() {
-                var btn = $(this);
-                btn.prop('disabled', true).text('Đang kiểm tra...');
-                $.post('/BorrowTickets/CheckInventory', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) {
-                        alert(res.message);
-                        btn.hide();
-                        $('#btnApproveTicket').show();
-                    } else {
-                        alert(res.message);
-                        btn.prop('disabled', false).text('Kiểm tra khả dụng');
-                    }
-                });
-            });
+            const btnCheckInventory = document.getElementById('btnCheckInventory');
+            if (btnCheckInventory) {
+                btnCheckInventory.addEventListener('click', function() {
+                    const btn = this;
+                    btn.disabled = true;
+                    btn.textContent = 'Đang kiểm tra...';
 
-            $('#btnApproveTicket').click(function() {
-                $(this).prop('disabled', true).text('Đang xử lý...');
-                $.post('/BorrowTickets/ApproveTicket', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) { alert("Duyệt phiếu thành công!"); location.reload(); }
+                    postData('/BorrowTickets/CheckInventory', {
+                        ticketId: ticketId,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert(res.message);
+                            btn.style.display = 'none';
+                            const btnApproveTicket = document.getElementById('btnApproveTicket');
+                            if (btnApproveTicket) btnApproveTicket.style.display = 'inline-block'; // Tương đương show()
+                        } else {
+                            alert(res.message);
+                            btn.disabled = false;
+                            btn.textContent = 'Kiểm tra khả dụng';
+                        }
+                    }).catch(error => console.error('Error:', error));
                 });
-            });
+            }
+
+            // Duyệt phiếu
+            const btnApproveTicket = document.getElementById('btnApproveTicket');
+            if (btnApproveTicket) {
+                btnApproveTicket.addEventListener('click', function() {
+                    this.disabled = true;
+                    this.textContent = 'Đang xử lý...';
+
+                    postData('/BorrowTickets/ApproveTicket', {
+                        ticketId: ticketId,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert("Duyệt phiếu thành công!");
+                            location.reload();
+                        }
+                    });
+                });
+            }
 
             // xóa sách khi kiểm tra tồn kho thiếu
-            $('.btn-remove-book').click(function() {
-                var bookId = $(this).data('book-id');
-                var removeAll = $(this).data('remove-all');
-                if (!confirm("Xác nhận xóa/giảm cuốn này khỏi phiếu?")) return;
-                $.post('/BorrowTickets/RemoveBookFromTicket', { ticketId: ticketId, bookId: bookId, removeAll: removeAll, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) { if (res.isCanceled) alert(res.message); location.reload(); }
+            document.querySelectorAll('.btn-remove-book').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const bookId = this.getAttribute('data-book-id');
+                    const removeAll = this.getAttribute('data-remove-all');
+
+                    if (!confirm("Xác nhận xóa/giảm cuốn này khỏi phiếu?")) return;
+
+                    postData('/BorrowTickets/RemoveBookFromTicket', {
+                        ticketId: ticketId,
+                        bookId: bookId,
+                        removeAll: removeAll,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            if (res.isCanceled) alert(res.message);
+                            location.reload();
+                        }
+                    });
                 });
             });
 
             // quét mã giao sách
-            $('.issue-scanner').keypress(function(e) {
-                if (e.which == 13) {
-                    e.preventDefault();
-                    var input = $(this);
-                    var group = input.closest('.book-group');
-                    var bookId = group.data('book-id');
-                    var reqQty = parseInt(group.data('qty'));
-                    var barcode = input.val().trim().toUpperCase();
-                    input.val('');
-                    if (barcode === "") return;
+            document.querySelectorAll('.issue-scanner').forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') { // e.which == 13
+                        e.preventDefault();
 
-                    var textarea = group.find('.issue-codes-result');
-                    var currentCodes = textarea.val() ? textarea.val().split(',').map(s => s.trim()) : [];
+                        const group = this.closest('.book-group');
+                        const bookId = group.getAttribute('data-book-id');
+                        const reqQty = parseInt(group.getAttribute('data-qty'));
+                        const barcode = this.value.trim().toUpperCase();
 
-                    if (currentCodes.length >= reqQty) { alert("Đã quét đủ sách này!"); return; }
-                    if (currentCodes.includes(barcode)) { alert("Trùng mã!"); return; }
+                        this.value = '';
+                        if (barcode === "") return;
 
-                    $.post('/BorrowTickets/ValidateBarcode', { ticketId: ticketId, bookId: bookId, barcode: barcode, __RequestVerificationToken: token }, function(res) {
-                        if (res.isValid) {
-                            currentCodes.push(barcode);
-                            textarea.val(currentCodes.join(', '));
-                            group.find('.issue-count').text(currentCodes.length);
-                            if (currentCodes.length === reqQty) input.prop('disabled', true).attr('placeholder', 'Đã quét xong!');
+                        const textarea = group.querySelector('.issue-codes-result');
+                        const currentCodes = textarea.value ? textarea.value.split(',').map(s => s.trim()) : [];
 
-                            var allDone = true;
-                            $('.book-group').each(function() {
-                                if (($(this).find('.issue-codes-result').val() ? $(this).find('.issue-codes-result').val().split(',').filter(s => s !== "").length : 0) < parseInt($(this).data('qty'))) allDone = false;
-                            });
-                            $('#btnSaveScanned').prop('disabled', !allDone);
-                        } else { alert(res.message); }
-                    });
-                }
+                        if (currentCodes.length >= reqQty) {
+                            alert("Đã quét đủ sách này!");
+                            return;
+                        }
+                        if (currentCodes.includes(barcode)) {
+                            alert("Trùng mã!");
+                            return;
+                        }
+
+                        const self = this;
+                        postData('/BorrowTickets/ValidateBarcode', {
+                            ticketId: ticketId,
+                            bookId: bookId,
+                            barcode: barcode,
+                            __RequestVerificationToken: token
+                        }).then(res => {
+                            if (res.isValid) {
+                                currentCodes.push(barcode);
+                                textarea.value = currentCodes.join(', ');
+
+                                const issueCount = group.querySelector('.issue-count');
+                                if (issueCount) issueCount.textContent = currentCodes.length;
+
+                                if (currentCodes.length === reqQty) {
+                                    self.disabled = true;
+                                    self.setAttribute('placeholder', 'Đã quét xong!');
+                                }
+
+                                // Kiểm tra xem tất cả đã xong chưa
+                                let allDone = true;
+                                document.querySelectorAll('.book-group').forEach(g => {
+                                    const ta = g.querySelector('.issue-codes-result');
+                                    const codesCount = ta && ta.value ? ta.value.split(',').filter(s => s !== "").length : 0;
+                                    const qty = parseInt(g.getAttribute('data-qty'));
+                                    if (codesCount < qty) {
+                                        allDone = false;
+                                    }
+                                });
+
+                                const btnSaveScanned = document.getElementById('btnSaveScanned');
+                                if (btnSaveScanned) btnSaveScanned.disabled = !allDone;
+                            } else {
+                                alert(res.message);
+                            }
+                        });
+                    }
+                });
             });
 
             // lưu mã và chuyển sách sang onHold
-            $('#btnSaveScanned').click(function() {
-                var allScannedCodes = [];
-                $('.issue-codes-result').each(function() {
-                    allScannedCodes = allScannedCodes.concat($(this).val().split(',').map(s => s.trim()).filter(s => s !== ""));
+            const btnSaveScanned = document.getElementById('btnSaveScanned');
+            if (btnSaveScanned) {
+                btnSaveScanned.addEventListener('click', function() {
+                    let allScannedCodes = [];
+                    document.querySelectorAll('.issue-codes-result').forEach(textarea => {
+                        const codes = textarea.value.split(',').map(s => s.trim()).filter(s => s !== "");
+                        allScannedCodes = allScannedCodes.concat(codes);
+                    });
+
+                    this.disabled = true;
+                    this.textContent = 'Đang lưu...';
+
+                    postData('/BorrowTickets/SaveScannedCodes', {
+                        ticketId: ticketId,
+                        scannedCodes: allScannedCodes,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert("Lưu mã thành công!");
+                            location.reload();
+                        }
+                    });
                 });
-                $(this).prop('disabled', true).text('Đang lưu...');
-                $.post('/BorrowTickets/SaveScannedCodes', { ticketId: ticketId, scannedCodes: allScannedCodes, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) { alert("Lưu mã thành công!"); location.reload(); }
-                });
-            });
+            }
 
             // giao sách
-            $('#btnConfirmHandover').click(function() {
-                $(this).prop('disabled', true).text('Đang xử lý...');
-                $.post('/BorrowTickets/ConfirmHandover', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) { alert("Sách đã được giao cho khách!"); location.reload(); }
+            const btnConfirmHandover = document.getElementById('btnConfirmHandover');
+            if (btnConfirmHandover) {
+                btnConfirmHandover.addEventListener('click', function() {
+                    this.disabled = true;
+                    this.textContent = 'Đang xử lý...';
+
+                    postData('/BorrowTickets/ConfirmHandover', {
+                        ticketId: ticketId,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert("Sách đã được giao cho khách!");
+                            location.reload();
+                        }
+                    });
                 });
-            });
+            }
 
-            // quét mã thu hôi sách
-            $('.return-scanner').keypress(function(e) {
-                if (e.which == 13) {
-                    e.preventDefault();
-                    var barcode = $(this).val().trim().toUpperCase();
-                    $(this).val('');
-                    if (barcode === "") return;
+            // quét mã thu hồi sách
+            document.querySelectorAll('.return-scanner').forEach(input => {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const barcode = this.value.trim().toUpperCase();
+                        this.value = '';
 
-                    var badge = $(this).closest('.book-group').find('.return-badge[data-code="' + barcode + '"]');
-                    if (badge.length === 0) { alert("Mã này không đúng!"); return; }
-                    if (badge.hasClass('text-decoration-line-through')) { alert("Đã nhận lại mã này rồi!"); return; }
+                        if (barcode === "") return;
 
-                    badge.addClass('text-decoration-line-through bg-secondary text-white');
-                    if ($('.return-badge:not(.text-decoration-line-through)').length === 0) {
-                        $('#btnConfirmReturn').prop('disabled', false);
-                        alert("Tuyệt vời! Khách đã trả đủ sách.");
+                        const group = this.closest('.book-group');
+                        const badge = group.querySelector('.return-badge[data-code="' + barcode + '"]');
+
+                        if (!badge) {
+                            alert("Mã này không đúng!");
+                            return;
+                        }
+
+                        if (badge.classList.contains('text-decoration-line-through')) {
+                            alert("Đã nhận lại mã này rồi!");
+                            return;
+                        }
+
+                        badge.classList.add('text-decoration-line-through', 'bg-secondary', 'text-white');
+
+                        // Nếu không còn badge nào chưa gạch ngang
+                        if (document.querySelectorAll('.return-badge:not(.text-decoration-line-through)').length === 0) {
+                            const btnConfirmReturn = document.getElementById('btnConfirmReturn');
+                            if (btnConfirmReturn) btnConfirmReturn.disabled = false;
+                            alert("Tuyệt vời! Khách đã trả đủ sách.");
+                        }
                     }
-                }
-            });
-
-            $('#btnConfirmReturn').click(function() {
-                $(this).prop('disabled', true).text('Đang xử lý...');
-                $.post('/BorrowTickets/ConfirmReturnAll', { ticketId: ticketId, __RequestVerificationToken: token }, function(res) {
-                    if (res.success) { alert("Thu hồi thành công!"); location.reload(); }
                 });
             });
+
+            // Xác nhận thu hồi
+            const btnConfirmReturn = document.getElementById('btnConfirmReturn');
+            if (btnConfirmReturn) {
+                btnConfirmReturn.addEventListener('click', function() {
+                    this.disabled = true;
+                    this.textContent = 'Đang xử lý...';
+
+                    postData('/BorrowTickets/ConfirmReturnAll', {
+                        ticketId: ticketId,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert("Thu hồi thành công!");
+                            location.reload();
+                        }
+                    });
+                });
+            }
         });
     </script>
 }

@@ -81,75 +81,126 @@
     <script>
         // 1. Hàm xóa sản phẩm khỏi giỏ hàng
         function removeItem(cartId) {
-            if (confirm("Bạn có chắc chắn muốn xóa cuốn sách này khỏi giỏ hàng?")) {                
+            if (confirm("Bạn có chắc chắn muốn xóa cuốn sách này khỏi giỏ hàng?")) {
                 // Lấy Token bảo mật
-                var token = $('input[name="__RequestVerificationToken"]').val();
-                
-                $.ajax({
-                    url: '/Cart/RemoveItem',
-                    type: 'POST',
-                    data: { 
-                        id: cartId,
-                        __RequestVerificationToken: token // Truyền token vào data
+                const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+                const token = tokenElement ? tokenElement.value : '';
+
+                // Gom dữ liệu để gửi
+                const formData = new URLSearchParams();
+                formData.append('id', cartId);
+                formData.append('__RequestVerificationToken', token); // Truyền token vào data
+
+                fetch('/Cart/RemoveItem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
                     },
-                    success: function (res) {
+                    body: formData.toString()
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(response.status);
+                        }
+                        return response.json();
+                    })
+                    .then(res => {
                         if (res.success) {
-                            $('#cart-item-' + cartId).fadeOut(300, function() { 
-                                $(this).remove(); 
-                                // Nếu xóa hết sạch item thì reload lại trang
-                                if ($('.cart-row').length === 0) {
+                            const cartItem = document.getElementById('cart-item-' + cartId);
+                            if (cartItem) {
+                                // Tạo hiệu ứng fadeOut bằng CSS transition
+                                cartItem.style.transition = 'opacity 0.3s ease';
+                                cartItem.style.opacity = '0';
+
+                                setTimeout(() => {
+                                    cartItem.remove();
+                                    // Nếu xóa hết sạch item thì reload lại trang
+                                    const cartRows = document.querySelectorAll('.cart-row');
+                                    if (cartRows.length === 0) {
+                                        location.reload();
+                                    }
+                                }, 300);
+                            } else {
+                                // Phòng trường hợp không tìm thấy DOM thì vẫn check reload
+                                if (document.querySelectorAll('.cart-row').length === 0) {
                                     location.reload();
                                 }
-                            });                            
-                            
+                            }
+
                             // Cập nhật lại số đếm ở Header
-                            $.get('/Home/GetCartItemCount', function (count) {
-                                let badge = $('#cartItemCountBadge');
-                                if (badge.length > 0) {
-                                    badge.text(count);
-                                    badge.css('display', count > 0 ? 'inline-block' : 'none');
-                                }
-                            });
+                            fetch('/Home/GetCartItemCount')
+                                .then(r => r.text()) // dùng text() phòng trường hợp server trả về kiểu số thuần túy
+                                .then(count => {
+                                    const badge = document.getElementById('cartItemCountBadge');
+                                    if (badge) {
+                                        badge.textContent = count;
+                                        badge.style.display = parseInt(count) > 0 ? 'inline-block' : 'none';
+                                    }
+                                })
+                                .catch(err => console.error("Không thể lấy số lượng giỏ hàng:", err));
                         } else {
                             alert("Lỗi: " + res.message);
                         }
-                    },
-                    error: function (xhr) {
-                        alert("Không thể kết nối đến máy chủ. Mã lỗi: " + xhr.status);
-                    }
-                });
+                    })
+                    .catch(error => {
+                        alert("Không thể kết nối đến máy chủ. Mã lỗi: " + error.message);
+                    });
             }
         }
 
         // 2. Hàm tạo phiếu mượn
         function createBorrowTicket() {
-            var token = $('input[name="__RequestVerificationToken"]').val();
-            // Nếu có ô input targetUsername (dành cho thủ thư) thì lấy giá trị, không thì để rỗng
-            var targetUser = $('#targetUsername').length ? $('#targetUsername').val() : '';
+            // Lấy Token bảo mật
+            const tokenElement = document.querySelector('input[name="__RequestVerificationToken"]');
+            const token = tokenElement ? tokenElement.value : '';
 
-            $('#btnCreateTicket').prop('disabled', true).html('<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang xử lý...');            
-            
-            $.ajax({
-                url: '/Cart/CreateTicket', // Gọi vào hàm CreateTicket trong CartController
-                type: 'POST',
-                data: {
-                    targetUsername: targetUser,
-                    __RequestVerificationToken: token
+            // Nếu có ô input targetUsername (dành cho thủ thư) thì lấy giá trị, không thì để rỗng
+            const targetUserElement = document.getElementById('targetUsername');
+            const targetUser = targetUserElement ? targetUserElement.value : '';
+
+            const btnCreateTicket = document.getElementById('btnCreateTicket');
+            if (btnCreateTicket) {
+                btnCreateTicket.disabled = true;
+                btnCreateTicket.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i> Đang xử lý...';
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('targetUsername', targetUser);
+            formData.append('__RequestVerificationToken', token);
+
+            fetch('/Cart/CreateTicket', { // Gọi vào hàm CreateTicket trong CartController
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                success: function (res) {
+                body: formData.toString()
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(response.status);
+                    }
+                    return response.json();
+                })
+                .then(res => {
                     if (res.success) {
                         alert(res.message);
                         window.location.href = '/BorrowTickets/Index'; // Chuyển sang trang xem Phiếu mượn
                     } else {
                         alert(res.message);
-                        $('#btnCreateTicket').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Xác nhận mượn sách');
+                        if (btnCreateTicket) {
+                            btnCreateTicket.disabled = false;
+                            btnCreateTicket.innerHTML = '<i class="fa-solid fa-check me-2"></i> Xác nhận mượn sách';
+                        }
                     }
-                },
-                error: function (xhr) {
-                    alert("Yêu cầu bị từ chối! (Mã lỗi: " + xhr.status + ")");
-                    $('#btnCreateTicket').prop('disabled', false).html('<i class="fa-solid fa-check me-2"></i> Xác nhận mượn sách');
-                }
-            });
+                })
+                .catch(error => {
+                    alert("Yêu cầu bị từ chối! (Mã lỗi: " + error.message + ")");
+                    if (btnCreateTicket) {
+                        btnCreateTicket.disabled = false;
+                        btnCreateTicket.innerHTML = '<i class="fa-solid fa-check me-2"></i> Xác nhận mượn sách';
+                    }
+                });
         }
     </script>
+}
 }

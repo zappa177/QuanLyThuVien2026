@@ -165,90 +165,172 @@
 
 @section Scripts {
     <script>
+        // Mở modal thêm kệ sách
         function openAddShelfModal() {
-            $('#ShelfId').val(0);
-            $('#ShelfName').val('');
-            $('#shelfModalTitle').text('Thêm kệ sách');
+            document.getElementById('ShelfId').value = 0;
+            document.getElementById('ShelfName').value = '';
+            document.getElementById('shelfModalTitle').textContent = 'Thêm kệ sách';
+
             new bootstrap.Modal(document.getElementById('shelfModal')).show();
         }
 
+        // Mở modal chỉnh sửa kệ sách
         function openEditShelfModal(id, name) {
-            $('#ShelfId').val(id);
-            $('#ShelfName').val(name);
-            $('#shelfModalTitle').text('Chỉnh sửa kệ sách');
+            document.getElementById('ShelfId').value = id;
+            document.getElementById('ShelfName').value = name;
+            document.getElementById('shelfModalTitle').textContent = 'Chỉnh sửa kệ sách';
+
             new bootstrap.Modal(document.getElementById('shelfModal')).show();
         }
 
-        $('#shelfForm').submit(function(e) {
-            e.preventDefault();
-            $.post('/Shelves/SaveShelf', $(this).serialize(), function(response) {
-                if (response.success) location.reload();
-                else alert(response.message);
-            });
-        });
-
+        // Thay đổi trạng thái kệ sách (Ẩn/Hiện)
         function toggleShelfStatus(id) {
-            $.post('/Shelves/ToggleShelfStatus', { id: id }, function(response) {
-                if (response.success) location.reload();
-                else alert(response.message);
-            });
+            fetch('/Shelves/ToggleShelfStatus', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ id: id }).toString()
+            })
+                .then(response => response.json())
+                .then(response => {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert(response.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
 
+        // Mở modal quản lý tầng
         function openManageTierModal(shelfId, shelfName) {
-            $('#ModalShelfId').val(shelfId);
-            $('#modalShelfTitle').text('Quản lý tầng - ' + shelfName);
+            document.getElementById('ModalShelfId').value = shelfId;
+            document.getElementById('modalShelfTitle').textContent = 'Quản lý tầng - ' + shelfName;
+
             resetTierForm();
             loadTiers(shelfId);
+
             new bootstrap.Modal(document.getElementById('manageTierModal')).show();
         }
 
+        // Tải danh sách các tầng
         function loadTiers(shelfId) {
-            $.get('/Shelves/GetTiersByShelf', { shelfId: shelfId }, function(data) {
-                var rows = '';
-                $.each(data.tiers, function(i, tier) {
-                    var actionText = tier.isActive ? "Ẩn" : "Hiện";
-                    var actionClass = tier.isActive ? "text-danger" : "text-success";
-                    rows += `<tr>
-                                <td class="fw-bold">${tier.tierName}</td>
-                                <td>${tier.capacity}</td>
-                                <td>${tier.currentBooks} / ${tier.capacity}</td>
-                                <td>
-                                    <a href="javascript:void(0);" class="text-primary text-decoration-none me-2" onclick="editTier(${tier.id}, '${tier.tierName}', ${tier.capacity})">Sửa</a>
-                                    <a href="javascript:void(0);" class="${actionClass} text-decoration-none" onclick="toggleTierStatus(${tier.id}, ${shelfId})">${actionText}</a>
-                                </td>
-                            </tr>`;
-                });
-                $('#tierTableBody').html(rows);
-            });
+            fetch('/Shelves/GetTiersByShelf?shelfId=' + encodeURIComponent(shelfId))
+                .then(response => response.json())
+                .then(data => {
+                    let rows = '';
+                    data.tiers.forEach(function(tier) {
+                        const actionText = tier.isActive ? "Ẩn" : "Hiện";
+                        const actionClass = tier.isActive ? "text-danger" : "text-success";
+
+                        rows += `<tr>
+                                        <td class="fw-bold">${tier.tierName}</td>
+                                        <td>${tier.capacity}</td>
+                                        <td>${tier.currentBooks} / ${tier.capacity}</td>
+                                        <td>
+                                            <a href="javascript:void(0);" class="text-primary text-decoration-none me-2" onclick="editTier(${tier.id}, '${tier.tierName}', ${tier.capacity})">Sửa</a>
+                                            <a href="javascript:void(0);" class="${actionClass} text-decoration-none" onclick="toggleTierStatus(${tier.id}, ${shelfId})">${actionText}</a>
+                                        </td>
+                                    </tr>`;
+                    });
+                    document.getElementById('tierTableBody').innerHTML = rows;
+                })
+                .catch(error => console.error('Error:', error));
         }
 
+        // Đổ dữ liệu vào form sửa tầng
         function editTier(id, name, capacity) {
-            $('#TierId').val(id);
-            $('#TierName').val(name);
-            $('#Capacity').val(capacity);
+            document.getElementById('TierId').value = id;
+            document.getElementById('TierName').value = name;
+            document.getElementById('Capacity').value = capacity;
         }
 
+        // Đặt lại form tầng
         function resetTierForm() {
-            $('#TierId').val(0);
-            $('#TierName').val('');
-            $('#Capacity').val(50);
+            document.getElementById('TierId').value = 0;
+            document.getElementById('TierName').value = '';
+            document.getElementById('Capacity').value = 50;
         }
 
-        $('#tierForm').submit(function(e) {
-            e.preventDefault();
-            $.post('/Shelves/SaveTier', $(this).serialize(), function(response) {
-                if (response.success) {
-                    loadTiers($('#ModalShelfId').val());
-                    resetTierForm();
-                } else alert(response.message);
-            });
-        });
-
+        // Thay đổi trạng thái tầng (Ẩn/Hiện)
         function toggleTierStatus(tierId, shelfId) {
-            $.post('/Shelves/ToggleTierStatus', { id: tierId }, function(response) {
-                if (response.success) loadTiers(shelfId);
-                else alert(response.message);
-            });
+            fetch('/Shelves/ToggleTierStatus', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ id: tierId }).toString()
+            })
+                .then(response => response.json())
+                .then(response => {
+                    if (response.success) {
+                        loadTiers(shelfId);
+                    } else {
+                        alert(response.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
         }
+
+        // Gắn sự kiện submit cho các form sau khi DOM đã sẵn sàng
+        document.addEventListener('DOMContentLoaded', function() {
+
+            // Xử lý submit form thêm/sửa kệ sách
+            const shelfForm = document.getElementById('shelfForm');
+            if (shelfForm) {
+                shelfForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new URLSearchParams(new FormData(this)).toString();
+
+                    fetch('/Shelves/SaveShelf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(response => {
+                            if (response.success) {
+                                location.reload();
+                            } else {
+                                alert(response.message);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                });
+            }
+
+            // Xử lý submit form thêm/sửa tầng
+            const tierForm = document.getElementById('tierForm');
+            if (tierForm) {
+                tierForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+
+                    const formData = new URLSearchParams(new FormData(this)).toString();
+
+                    fetch('/Shelves/SaveTier', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: formData
+                    })
+                        .then(response => response.json())
+                        .then(response => {
+                            if (response.success) {
+                                loadTiers(document.getElementById('ModalShelfId').value);
+                                resetTierForm();
+                            } else {
+                                alert(response.message);
+                            }
+                        })
+                        .catch(error => console.error('Error:', error));
+                });
+            }
+
+        });
     </script>
 }
