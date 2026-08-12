@@ -119,6 +119,16 @@ namespace QuanLyThuVien.Web.Controllers
 
             if (book == null) return NotFound();
 
+            // CHỐT CHẶN BẢO MẬT CHO AJAX
+            if (!User.IsInRole("Admin"))
+            {
+                if (!book.IsActive || (book.Category != null && !book.Category.IsActive))
+                {
+                    // Trả về lỗi 404 (Not Found) để jstự động nhảy vào block .catch() và báo lỗi
+                    return NotFound(new { message = "Sách này đã bị ẩn hoặc không tồn tại." });
+                }
+            }
+
             int totalCopies = book.BookCopies?.Count ?? 0;
             var availableCopies = book.BookCopies?.Where(bc =>
                 bc.Status == BookCopyStatus.Available && bc.IsActive && !bc.IsReferenceOnly).ToList();
@@ -339,45 +349,53 @@ namespace QuanLyThuVien.Web.Controllers
         {
             try
             {
-                var book = await _context.Books.FindAsync(id);
-                if (book == null)
-                    return Json(new { success = false, message = "Không tìm thấy sách." });
+                // Include BookCopies để lấy các bản sao vật lý
+                var book = await _context.Books.Include(b => b.BookCopies).FirstOrDefaultAsync(b => b.Id == id);
+                if (book == null) return Json(new { success = false, message = "Không tìm thấy sách." });
 
-                // Xóa mềm: Chuyển trạng thái IsActive thành false
-                book.IsActive = false;
+                book.IsActive = false; // Ẩn tựa sách
+
+                // Cập nhật ẩn luôn toàn bộ bản sao vật lý của nó
+                if (book.BookCopies != null)
+                {
+                    foreach (var copy in book.BookCopies)
+                    {
+                        copy.IsActive = false;
+                    }
+                }
+
                 _context.Books.Update(book);
                 await _context.SaveChangesAsync();
-
                 return Json(new { success = true });
             }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
+            catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
         }
 
-        //admin khôi phục sách (set IsActive = true)
         [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> RestoreBook(int id)
         {
             try
             {
-                var book = await _context.Books.FindAsync(id);
-                if (book == null)
-                    return Json(new { success = false, message = "Không tìm thấy sách hoặc có lỗi xảy ra." });
+                var book = await _context.Books.Include(b => b.BookCopies).FirstOrDefaultAsync(b => b.Id == id);
+                if (book == null) return Json(new { success = false, message = "Không tìm thấy sách." });
 
-                // Khôi phục: Chuyển trạng thái IsActive thành true
-                book.IsActive = true;
+                book.IsActive = true; // Hiện tựa sách
+
+                // Hiện lại toàn bộ bản sao vật lý
+                if (book.BookCopies != null)
+                {
+                    foreach (var copy in book.BookCopies)
+                    {
+                        copy.IsActive = true;
+                    }
+                }
+
                 _context.Books.Update(book);
                 await _context.SaveChangesAsync();
-
                 return Json(new { success = true });
             }
-            catch (Exception ex)
-            {
-                return Json(new { success = false, message = ex.Message });
-            }
+            catch (Exception ex) { return Json(new { success = false, message = ex.Message }); }
         }
 
 

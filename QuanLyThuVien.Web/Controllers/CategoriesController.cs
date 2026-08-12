@@ -69,36 +69,41 @@ namespace QuanLyThuVien.Web.Controllers
         [HttpPost]
         public async Task<IActionResult> ToggleCategoryStatus(int id)
         {
-            // lấy thông tin thể loại
             var category = await _context.Categories.FindAsync(id);
-            if (category == null)
-            {
-                return Json(new { success = false, message = "Không tìm thấy thể loại." });
-            }
+            if (category == null) return Json(new { success = false, message = "Không tìm thấy thể loại." });
 
-            // đảo ngược trạng thái của thể loại
-            category.IsActive = !category.IsActive;
+            category.IsActive = !category.IsActive; // Đảo trạng thái
 
-            // lấy toàn bộ sách thuộc thể loại này
+            // Lấy toàn bộ sách thuộc thể loại này VÀ BAO GỒM CẢ BẢN SAO VẬT LÝ
             var relatedBooks = await _context.Books
+                .Include(b => b.BookCopies) // <--- QUAN TRỌNG: Include thêm bảng này
                 .Where(b => b.CategoryId == id)
                 .ToListAsync();
 
-            // cập nhật trạng thái của tất cả sách liên quan theo trạng thái của thể loại
+            int totalCopiesAffected = 0;
+
+            // Cập nhật trạng thái tựa sách và bản sao
             foreach (var book in relatedBooks)
             {
                 book.IsActive = category.IsActive;
+
+                if (book.BookCopies != null)
+                {
+                    foreach (var copy in book.BookCopies)
+                    {
+                        copy.IsActive = category.IsActive;
+                        totalCopiesAffected++;
+                    }
+                }
             }
 
-            // Không cần gọi _context.Categories.Update(category)  vì chỉ cập nhật 1 thuộc tính
             await _context.SaveChangesAsync();
 
-            // Trả về câu thông báo chi tiết hơn để hiển thị cho người dùng
             var statusText = category.IsActive ? "hiện" : "ẩn";
             return Json(new
             {
                 success = true,
-                message = $"Đã {statusText} thể loại và {relatedBooks.Count} cuốn sách liên quan."
+                message = $"Đã {statusText} thể loại, {relatedBooks.Count} tựa sách và {totalCopiesAffected} bản sao liên quan."
             });
         }
     }

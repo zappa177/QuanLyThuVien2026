@@ -25,6 +25,15 @@ namespace QuanLyThuVien.Web.Controllers
         {
             var book = await _context.Books.FindAsync(bookId);
             if (book == null) return NotFound("Không tìm thấy tựa sách.");
+            // Nếu không phải admin mà là thủ thư thì chỉ hiển thị các bản sao đang hoạt động
+            if (!User.IsInRole("Admin"))
+            {
+                // Nếu Tựa sách bị ẩn HOẶC Thể loại của nó bị ẩn -> sang trang Từ chối truy cập
+                if (!book.IsActive || (book.Category != null && !book.Category.IsActive))
+                {
+                    return RedirectToAction("AccessDenied", "Account");
+                }
+            }
 
             //Tạo câu truy vấn cơ bản thông tin bản sao của tựa sách
             var query = _context.BookCopies
@@ -33,11 +42,7 @@ namespace QuanLyThuVien.Web.Controllers
                 .Where(c => c.BookId == bookId)
                 .AsQueryable();
 
-            // Nếu không phải admin mà là thủ thư thì chỉ hiển thị các bản sao đang hoạt động
-            if (!User.IsInRole("Admin"))
-            {
-                query = query.Where(c => c.IsActive == true);
-            }
+
 
             var copies = await query.ToListAsync();
 

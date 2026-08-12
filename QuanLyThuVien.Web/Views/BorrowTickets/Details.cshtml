@@ -121,6 +121,11 @@
                     }
                     else if (Model.Status == BorrowStatus.Accepted)
                     {
+                        // ---> nút danh sách <---
+                        <button type="button" class="btn btn-info rounded-0 px-4 py-2 me-2 text-white fw-bold" id="btnShowLocations">
+                            <i class=""></i> Xem vị trí lấy sách
+                        </button>
+
                         if (!isFullyAssigned)
                         {
                             <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnSaveScanned" disabled>Lưu mã đã quét</button>
@@ -136,6 +141,24 @@
                     }
                 </div>
             }
+        </div>
+    </div>
+</div>
+
+<!-- Modal Gợi ý vị trí sách -->
+<div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-0 border-0 shadow">
+            <div class="modal-header border-bottom bg-info text-white rounded-0">
+                <h5 class="modal-title fw-bold"><i class="me-2"></i> Danh sách vị trí sách cần lấy</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 bg-light" id="locationModalBody">
+                <div class="text-center text-muted"><i class=""></i><br>Đang tải dữ liệu...</div>
+            </div>
+            <div class="modal-footer border-0 justify-content-center bg-light">
+                <button type="button" class="btn btn-secondary px-5 rounded-0" data-bs-dismiss="modal">Đóng</button>
+            </div>
         </div>
     </div>
 </div>
@@ -398,6 +421,78 @@
                             location.reload();
                         }
                     });
+                });
+            }
+
+
+            // Xem vị trí lấy sách (Dành cho Thủ thư)
+            const btnShowLocations = document.getElementById('btnShowLocations');
+            if (btnShowLocations) {
+                btnShowLocations.addEventListener('click', function() {
+                    // Mở modal lên trước
+                    const locationModal = new bootstrap.Modal(document.getElementById('locationModal'));
+                    locationModal.show();
+
+                    const modalBody = document.getElementById('locationModalBody');
+                    modalBody.innerHTML = '<div class="text-center text-muted"><i class=""></i><br>Đang tải dữ liệu...</div>';
+
+                    // Gọi API lấy dữ liệu vị trí
+                    fetch('/BorrowTickets/GetAvailableCopiesForTicket?ticketId=' + ticketId)
+                        .then(res => {
+                            if (!res.ok) throw new Error('Lỗi máy chủ');
+                            return res.json();
+                        })
+                        .then(data => {
+                            if (data.length === 0) {
+                                modalBody.innerHTML = '<div class="alert alert-success text-center rounded-0">Đã quét đủ mã sách cho phiếu này, không cần đi lấy thêm!</div>';
+                                return;
+                            }
+
+                            let htmlContent = '';
+                            data.forEach(item => {
+                                htmlContent += `
+                                <div class="card border-0 shadow-sm mb-3 rounded-0">
+                                    <div class="card-header bg-white border-bottom fw-bold text-primary">
+                                        <i class="me-2"></i> ${item.bookTitle} (Cần lấy: ${item.requiredQty} cuốn)
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-bordered table-hover mb-0 text-center align-middle">
+                                            <thead class="table-light text-muted">
+                                                <tr>
+                                                    <th>Mã sách</th>
+                                                    <th>Vị trí đang lưu trữ</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                            `;
+
+                                if (item.copies.length > 0) {
+                                    item.copies.forEach(copy => {
+                                        htmlContent += `
+                                        <tr>
+                                            <td class="fw-bold text-dark">${copy.copyCode}</td>
+                                            <td class="text-danger fw-bold"><i class=" me-1"></i> ${copy.location}</td>
+                                        </tr>
+                                    `;
+                                    });
+                                } else {
+                                    htmlContent += `<tr><td colspan="2" class="text-danger fst-italic py-3">Không tìm thấy bản sao khả dụng nào trong kho!</td></tr>`;
+                                }
+
+                                htmlContent += `
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            `;
+                            });
+
+                            modalBody.innerHTML = htmlContent;
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            modalBody.innerHTML = '<div class="alert alert-danger text-center rounded-0">Có lỗi xảy ra khi tải dữ liệu. Vui lòng thử lại!</div>';
+                        });
                 });
             }
         });

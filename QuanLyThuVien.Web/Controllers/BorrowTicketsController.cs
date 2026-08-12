@@ -239,5 +239,58 @@ namespace QuanLyThuVien.Web.Controllers
             await _context.SaveChangesAsync();
             return Json(new { success = true });
         }
+
+        // API: Lấy gợi ý vị trí sách cho Thủ thư đi nhặt
+        [HttpGet]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> GetAvailableCopiesForTicket(int ticketId)
+        {
+            var ticket = await _context.BorrowTickets
+                .Include(t => t.TicketDetails)
+                .ThenInclude(d => d.Book)
+                .FirstOrDefaultAsync(t => t.Id == ticketId);
+
+            if (ticket == null) return NotFound();
+
+            // Nhóm các sách lại, chỉ quan tâm những sách chưa được gán mã vật lý
+            var groupedRequests = ticket.TicketDetails
+                .Where(d => d.BookCopyId == null)
+                .GroupBy(d => d.BookId)
+                .ToList();
+
+            var result = new List<object>();
+
+            foreach (var group in groupedRequests)
+            {
+                var book = group.First().Book;
+                int reqQty = group.Count();
+
+                // Tìm tất cả các bản sao đang khả dụng của tựa sách này
+                var availableCopies = await _context.BookCopies
+                    .Include(bc => bc.ShelfTier)
+                        .ThenInclude(st => st!.Shelf)
+                    .Where(bc => bc.BookId == book!.Id
+                              && bc.Status == BookCopyStatus.Available
+                              && bc.IsActive
+                              && !bc.IsReferenceOnly)
+                    .Select(bc => new
+                    {
+                        copyCode = bc.CopyCode,
+                        location = bc.ShelfTier != null && bc.ShelfTier.Shelf != null
+                            ? $"{bc.ShelfTier.Shelf.Name} - {bc.ShelfTier.TierName}"
+                            : "Chưa xếp kệ"
+                    })
+                    .ToListAsync();
+
+                result.Add(new
+                {
+                    bookTitle = book!.Title,
+                    requiredQty = reqQty,
+                    copies = availableCopies
+                });
+            }
+
+            return Json(result);
+        }
     }
 }

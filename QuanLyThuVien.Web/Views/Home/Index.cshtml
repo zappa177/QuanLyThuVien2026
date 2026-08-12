@@ -276,7 +276,6 @@
                             document.getElementById('infoAuthor').textContent = data.author;
                             document.getElementById('infoYear').textContent = data.publishYear;
                             document.getElementById('infoPublisher').textContent = data.publisher;
-                            document.getElementById('infoLocation').textContent = data.suggestedLocation;
 
                             // 2. GÁN THÔNG TIN ERD MỚI (TỔNG SỐ VÀ KHẢ DỤNG)
                             document.getElementById('infoTotalCopies').textContent = data.totalCopies + ' cuốn';
@@ -326,7 +325,7 @@
                                 }
                             }
 
-                            // Hiện modal (sử dụng Bootstrap 5 API)
+                            // Hiện modal 
                             const infoBookModal = new bootstrap.Modal(document.getElementById('infoBookModal'));
                             infoBookModal.show();
                         })
