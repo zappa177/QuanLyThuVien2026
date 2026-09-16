@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using QuanLyThuVien.Web.Data;
 using QuanLyThuVien.Web.Entities;
 using QuanLyThuVien.Web.Models;
@@ -11,10 +12,12 @@ namespace QuanLyThuVien.Web.Controllers
     public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
 
-        public CategoriesController(ApplicationDbContext context)
+        public CategoriesController(ApplicationDbContext context, IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // categories/index
@@ -62,6 +65,7 @@ namespace QuanLyThuVien.Web.Controllers
             }
 
             await _context.SaveChangesAsync();
+            _cache.Remove("ActiveCategoriesList");
             return Json(new { success = true });
         }
 
@@ -98,6 +102,7 @@ namespace QuanLyThuVien.Web.Controllers
             }
 
             await _context.SaveChangesAsync();
+            _cache.Remove("ActiveCategoriesList");
 
             var statusText = category.IsActive ? "hiện" : "ẩn";
             return Json(new

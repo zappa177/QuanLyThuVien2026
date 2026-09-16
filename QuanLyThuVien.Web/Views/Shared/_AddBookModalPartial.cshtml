@@ -12,7 +12,7 @@
                 <div class="modal-body p-4 position-relative">
 
                     <!-- Nút X tắt Modal -->
-                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-6" data-bs-dismiss="modal" aria-label="Close"></button>
 
                     <form id="addBookForm" enctype="multipart/form-data">
                         @Html.AntiForgeryToken()
@@ -20,14 +20,14 @@
                         <!-- Form Fields -->
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Tên sách :</label>
-                            <div class="col-8">
+                            <div class="col-7">
                                 <input type="text" name="Title" class="form-control form-control-sm border-0 rounded-0" required />
                             </div>
                         </div>
 
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Thể loại :</label>
-                            <div class="col-8">
+                            <div class="col-7">
                                 <select name="CategoryId" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Categories" required>
                                     <option value="">-- Chọn --</option>
                                 </select>
