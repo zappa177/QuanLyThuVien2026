@@ -35,7 +35,7 @@ namespace QuanLyThuVien.Web.Controllers
             int? categoryId, int? publishYear,
             string sortBy = "PublishYear", int pageNumber = 1)
         {
-            int pageSize = 9;
+            int pageSize = 15;
             bool? isActiveFilter = User.IsInRole("Admin") ? null : true;
 
             // 1. Tạo Query trực tiếp từ DbContext
@@ -119,27 +119,42 @@ namespace QuanLyThuVien.Web.Controllers
 
             if (book == null) return NotFound();
 
-            // CHỐT CHẶN BẢO MẬT CHO AJAX
             if (!User.IsInRole("Admin"))
             {
                 if (!book.IsActive || (book.Category != null && !book.Category.IsActive))
                 {
-                    // Trả về lỗi 404 (Not Found) để jstự động nhảy vào block .catch() và báo lỗi
                     return NotFound(new { message = "Sách này đã bị ẩn hoặc không tồn tại." });
                 }
             }
 
             int totalCopies = book.BookCopies?.Count ?? 0;
             var availableCopies = book.BookCopies?.Where(bc =>
-                bc.Status == BookCopyStatus.Available && bc.IsActive && !bc.IsReferenceOnly).ToList();
+                (bc.Status == BookCopyStatus.Available || bc.Status == BookCopyStatus.Pending) && bc.IsActive && !bc.IsReferenceOnly).ToList();
             int availableCount = availableCopies?.Count ?? 0;
 
-            string suggestedLocation = "Chưa xếp kệ";
-            if (availableCopies != null && availableCopies.Any())
+            // danh sách vị chí từng bản sao
+            var copyLocations = availableCopies?.Select(bc => new
             {
-                var firstAvailable = availableCopies.First();
-                if (firstAvailable.ShelfTier?.Shelf != null)
-                    suggestedLocation = $"{firstAvailable.ShelfTier.Shelf.Name} - {firstAvailable.ShelfTier.TierName}";
+                copyId = bc.Id,
+                status = bc.Status.ToString(),
+                locationText = bc.Status == BookCopyStatus.Pending
+                    ? "Tại quầy (Chờ xếp kệ)"
+                    : (bc.ShelfTier?.Shelf != null ? $"{bc.ShelfTier.Shelf.Name} - {bc.ShelfTier.TierName}" : "Chưa xếp kệ")
+            }).ToList();
+
+            string suggestedLocation = "Chưa xếp kệ";
+            if (copyLocations != null && copyLocations.Any())
+            {
+                var pendingCount = availableCopies.Count(c => c.Status == BookCopyStatus.Pending);
+                if (pendingCount > 0)
+                {
+                    suggestedLocation = $"Có {pendingCount} bản đang ở quầy chờ xếp kệ, các bản khác nằm trên kệ.";
+                }
+                else
+                {
+                    var first = availableCopies.First();
+                    suggestedLocation = first.ShelfTier?.Shelf != null ? $"{first.ShelfTier.Shelf.Name} - {first.ShelfTier.TierName}" : "Chưa xếp kệ";
+                }
             }
 
             return Json(new
@@ -156,7 +171,8 @@ namespace QuanLyThuVien.Web.Controllers
                 isActive = book.IsActive,
                 totalCopies = totalCopies,
                 availableCount = availableCount,
-                suggestedLocation = suggestedLocation
+                suggestedLocation = suggestedLocation,
+                createdAt = book.CreatedAt
             });
         }
 
@@ -408,7 +424,7 @@ namespace QuanLyThuVien.Web.Controllers
             var user = await _userManager.GetUserAsync(User);
             if (user == null) return Json(0);
 
-            // Dùng SUM để tính tổng số lượng (Quantity) thay vì đếm số dòng
+            // Dùng SUM để tính tổng số lượng thay vì đếm số dòng
             int count = await _context.CartItems
                 .Where(c => c.UserId == user.Id)
                 .SumAsync(c => (int?)c.Quantity) ?? 0;

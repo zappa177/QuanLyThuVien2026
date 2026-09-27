@@ -1,4 +1,4 @@
-﻿namespace QuanLyThuVien.Web.Common // (Thay đổi namespace cho đúng với project của bạn)
+﻿namespace QuanLyThuVien.Web.Common
 {
     public class PagedResult<T>
     {

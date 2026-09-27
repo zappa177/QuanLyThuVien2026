@@ -21,11 +21,14 @@
     </ul>
 
     <!-- Nút Mở Modal Thêm Thể Loại -->
-    <div class="mb-3">
-        <button type="button" class="btn btn-success text-white px-4 rounded-0" onclick="openAddModal()">
-            Thêm thể loại
-        </button>
-    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="mb-3">
+            <button type="button" class="btn btn-success text-white px-4 rounded-0" onclick="openAddModal()">
+                Thêm thể loại
+            </button>
+        </div>
+    }
 
     <!-- Form Tìm kiếm  -->
     <form method="get" asp-action="Index" class="row g-3 mb-4 align-items-center">
@@ -41,15 +44,22 @@
     </form>
 
     <!-- Bảng danh sách thể loại -->
-    <div class="card border-0 shadow-sm">
+    <div class="card border-1 shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered mb-0 align-middle">
                     <thead class="table-light text-nowrap">
                         <tr>
-                            <th>Tên thể loại</th>
-                            <th class="text-center">Thao tác</th>
-                            <th class="text-center">Trạng thái</th>
+                            <th class="ps-4">Tên thể loại</th>
+                            <!-- Cột số lượng sách (Cả Admin và Thủ thư đều thấy để dễ tra cứu) -->
+                            <th class="text-center">Số lượng sách</th>
+
+                            <!-- chỉ cho admin -->
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <th class="text-center">Thao tác</th>
+                                <th class="text-center">Trạng thái</th>
+                            }
                         </tr>
                     </thead>
                     <tbody>
@@ -57,14 +67,26 @@
                         {
                             <tr>
                                 <td class="fw-bold ps-4 text-nowrap">@item.Name</td>
+
+                                <!-- HIỂN THỊ SỐ LƯỢNG SÁCH -->
                                 <td class="text-center text-nowrap">
-                                    <a href="javascript:void(0);" class="text-primary text-decoration-none"
-                                       onclick="openEditModal(@item.Id, '@item.Name')">Chỉnh sửa</a>
+                                    <span class="text-primary text-decoration-none rounded-0 px-3 py-2">
+                                        @item.BookCount cuốn
+                                    </span>
                                 </td>
-                                <td class="text-center text-nowrap">
-                                    <a href="javascript:void(0);" class="text-decoration-none @(item.IsActive ? "text-danger" : "text-success")"
-                                       onclick="toggleStatus(@item.Id)">@(item.IsActive ? "Ẩn" : "Hiện")</a>
-                                </td>
+
+                                <!-- CHỈ ADMIN MỚI THẤY NÚT SỬA VÀ ẨN/HIỆN -->
+                                @if (User.IsInRole("Admin"))
+                                {
+                                    <td class="text-center text-nowrap">
+                                        <a href="javascript:void(0);" class="text-primary text-decoration-none"
+                                           onclick="openEditModal(@item.Id, '@item.Name')">Chỉnh sửa</a>
+                                    </td>
+                                    <td class="text-center text-nowrap">
+                                        <a href="javascript:void(0);" class="text-decoration-none @(item.IsActive ? "text-danger" : "text-success")"
+                                           onclick="toggleStatus(@item.Id)">@(item.IsActive ? "Ẩn" : "Hiện")</a>
+                                    </td>
+                                }
                             </tr>
                         }
                     </tbody>
@@ -78,7 +100,7 @@
 <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header border-1 pb-0">
                 <h5 class="modal-title fw-bold" id="modalTitle">Thêm thể loại</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -92,7 +114,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 justify-content-center">
+                <div class="modal-footer border-1 justify-content-center">
                     <button type="submit" class="btn btn-success text-white px-5 rounded-0">Lưu</button>
                 </div>
             </form>

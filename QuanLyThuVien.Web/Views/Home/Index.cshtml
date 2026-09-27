@@ -17,40 +17,40 @@
         <div class="row g-3">
             <div class="col-md-5 d-flex align-items-center">
                 <label class="fw-bold me-2" style="min-width: 120px;">Tên tác giả :</label>
-                <input type="text" name="searchAuthor" value="@Model.SearchAuthor" class="form-control rounded-0 bg-light border-0" />
+                <input type="text" name="searchAuthor" value="@Model.SearchAuthor" class="form-control rounded-0 bg-light border-1" />
             </div>
             <div class="col-md-5 d-flex align-items-center">
                 <label class="fw-bold me-2" style="min-width: 120px;">Mã sách :</label>
-                <input type="text" name="searchISBN" value="@Model.SearchISBN" class="form-control rounded-0 bg-light border-0" />
+                <input type="text" name="searchISBN" value="@Model.SearchISBN" class="form-control rounded-0 bg-light border-1" />
             </div>
 
             <div class="w-100 d-none d-md-block m-0"></div> <!-- Xuống dòng -->
 
             <div class="col-md-5 d-flex align-items-center">
                 <label class="fw-bold me-2" style="min-width: 120px;">Tên sách :</label>
-                <input type="text" name="searchTitle" value="@Model.SearchTitle" class="form-control rounded-0 bg-light border-0" />
+                <input type="text" name="searchTitle" value="@Model.SearchTitle" class="form-control rounded-0 bg-light border-1" />
             </div>
             <div class="col-md-5 d-flex align-items-center">
                 <label class="fw-bold me-2" style="min-width: 120px;">Năm xuất bản :</label>
-                <input type="number" name="publishYear" value="@Model.PublishYear" class="form-control rounded-0 bg-light border-0" />
+                <input type="number" name="publishYear" value="@Model.PublishYear" class="form-control rounded-0 bg-light border-1" />
             </div>
 
             <div class="w-100 d-none d-md-block m-0"></div> <!-- Xuống dòng -->
 
             <div class="col-md-5 d-flex align-items-center">
                 <label class="fw-bold me-2" style="min-width: 120px;">Thể loại :</label>
-                <select name="categoryId" asp-items="@Model.Categories" class="form-select rounded-0 bg-light border-0">
+                <select name="categoryId" asp-items="@Model.Categories" class="form-select rounded-0 bg-light border-1">
                     <option value="">-- Tất cả --</option>
                 </select>
             </div>
 
             <div class="col-md-5 d-flex align-items-center justify-content-end gap-2">
-                <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 border-0 text-dark">Tìm kiếm</button>
+                <button type="submit" class="btn btn-warning fw-bold px-4 rounded-0 border-1 text-dark">Tìm kiếm</button>
 
                 <!-- button thêm sách nếu là role admin -->
                 @if (User.IsInRole("Admin"))
                 {
-                    <button type="button" class="btn btn-success fw-bold px-4 rounded-0 border-0" data-bs-toggle="modal" data-bs-target="#addBookModal">
+                    <button type="button" class="btn btn-success fw-bold px-4 rounded-0 border-1" data-bs-toggle="modal" data-bs-target="#addBookModal">
                         Thêm sách
                     </button>
                 }
@@ -72,7 +72,7 @@
     </div>
 
     <!-- hiển thị sách -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
         @if (Model.Books != null && Model.Books.Items.Any())
         {
             @foreach (var book in Model.Books.Items)
@@ -83,7 +83,7 @@
                         <!-- ảnh bìa sách -->
                         <div class="text-center pt-3" style="background: #eee9e9; background-size: cover;">
                             <img src="@(string.IsNullOrEmpty(book.CoverImage) ? "/images/no-cover.png" : book.CoverImage)"
-                                 alt="@book.Title" style="height: 220px; object-fit: fill;" 
+                                 alt="@book.Title" style="height: 220px; object-fit: contain;" 
                                  class="w-100"/>
                         </div>
 
@@ -111,19 +111,19 @@
     @if (Model.Books != null && Model.Books.TotalPages > 1)
     {
         <nav class="mt-5 mb-3 d-flex justify-content-center">
-            <ul class="pagination pagination-sm border-0">
+            <ul class="pagination pagination-sm border-1">
                 <li class="page-item @(Model.Books.HasPreviousPage ? "" : "disabled")">
-                    <a class="page-link text-dark border-0 fs-5" href="@Url.Action("Index", new { pageNumber = Model.Books.PageNumber - 1, sortBy = Model.SortBy, searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })">&lt;&lt;</a>
+                    <a class="page-link text-dark border-1 fs-5" href="@Url.Action("Index", new { pageNumber = Model.Books.PageNumber - 1, sortBy = Model.SortBy, searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })">&lt;&lt;</a>
                 </li>
                 @for (int i = 1; i <= Model.Books.TotalPages; i++)
                 {
                     <li class="page-item">
-                        <a class="page-link border-0 fs-5 @(i == Model.Books.PageNumber ? "fw-bold bg-transparent text-dark" : "text-dark")"
+                        <a class="page-link border-1 fs-5 @(i == Model.Books.PageNumber ? "fw-bold bg-transparent text-dark" : "text-dark")"
                            href="@Url.Action("Index", new { pageNumber = i, sortBy = Model.SortBy, searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })">@i</a>
                     </li>
                 }
                 <li class="page-item @(Model.Books.HasNextPage ? "" : "disabled")">
-                    <a class="page-link text-dark border-0 fs-5" href="@Url.Action("Index", new { pageNumber = Model.Books.PageNumber + 1, sortBy = Model.SortBy, searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })">&gt;&gt;</a>
+                    <a class="page-link text-dark border-1 fs-5" href="@Url.Action("Index", new { pageNumber = Model.Books.PageNumber + 1, sortBy = Model.SortBy, searchTitle = Model.SearchTitle, searchAuthor = Model.SearchAuthor, searchISBN = Model.SearchISBN, categoryId = Model.SelectedCategoryId, publishYear = Model.PublishYear })">&gt;&gt;</a>
                 </li>
             </ul>
         </nav>
@@ -277,11 +277,22 @@
                             document.getElementById('infoYear').textContent = data.publishYear;
                             document.getElementById('infoPublisher').textContent = data.publisher;
 
-                            // 2. GÁN THÔNG TIN ERD MỚI (TỔNG SỐ VÀ KHẢ DỤNG)
+                            //ngày thêm sách
+                            const createdAtElement = document.getElementById('infoCreatedAt');
+                            if (createdAtElement) { // Kiểm tra xem DOM có sinh ra thẻ này không (Role Admin/Librarian)
+                                if (data.createdAt) {
+                                    const dateObj = new Date(data.createdAt);
+                                    createdAtElement.textContent = dateObj.toLocaleDateString('vi-VN');
+                                } else {
+                                    createdAtElement.textContent = "Không xác định";
+                                }
+                            }
+
+                            // thông tin tổng số sách , số bản khả dụng
                             document.getElementById('infoTotalCopies').textContent = data.totalCopies + ' cuốn';
                             document.getElementById('infoAvailableCopies').textContent = data.availableCount + ' cuốn';
 
-                            // Khống chế ô chọn số lượng (Quantity)
+                            // Khống chế ô chọn số lượng 
                             const qtyInput = document.getElementById('infoQuantity');
                             if (qtyInput) {
                                 qtyInput.setAttribute('max', data.availableCount); // Giới hạn tối đa

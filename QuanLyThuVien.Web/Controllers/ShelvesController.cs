@@ -1,12 +1,12 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using QuanLyThuVien.Web.Entities;
 using QuanLyThuVien.Web.Data;
+using QuanLyThuVien.Web.Entities;
 
 namespace QuanLyThuVien.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Librarian")]
     public class ShelvesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -40,6 +40,7 @@ namespace QuanLyThuVien.Web.Controllers
         }
 
         // Thêm mới hoặc chỉnh sửa tên kệ sách
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> SaveShelf(int id, string name)
         {
@@ -78,6 +79,7 @@ namespace QuanLyThuVien.Web.Controllers
         }
 
         // Ẩn hiện kệ sách theo isactive (true/false)
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> ToggleShelfStatus(int id)
         {
@@ -124,8 +126,9 @@ namespace QuanLyThuVien.Web.Controllers
             });
         }
 
-        // Lấy danh sách tầng của 1 kệ cụ thể (Thống kê số lượng BookCopies thay vì Books cũ)
+        // Lấy danh sách tầng của 1 kệ cụ thể 
         [HttpGet]
+        [Authorize(Roles = "Admin, Librarian")]
         public async Task<IActionResult> GetTiersByShelf(int shelfId)
         {
             var shelf = await _context.Shelves.FindAsync(shelfId);
@@ -133,15 +136,16 @@ namespace QuanLyThuVien.Web.Controllers
 
             var tiers = await _context.ShelfTiers
                 .Where(t => t.ShelfId == shelfId)
-                .Include(t => t.BookCopies) // Lấy danh sách bản sao vật lý trên tầng
+                .Include(t => t.BookCopies)
                 .Select(t => new
                 {
                     id = t.Id,
                     tierName = t.TierName,
                     capacity = t.Capacity,
-                    currentBooks = t.BookCopies.Count, // Đếm số lượng bản sao vật lý thực tế trên kệ
+                    currentBooks = t.BookCopies.Count(c => c.IsActive),
                     isActive = t.IsActive
-                }).ToListAsync();
+                })
+                .ToListAsync();
 
             return Json(new
             {
@@ -151,6 +155,7 @@ namespace QuanLyThuVien.Web.Controllers
         }
 
         // Thêm mới hoặc Cập nhật Tầng
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> SaveTier(int id, int shelfId, string tierName, int capacity)
         {

@@ -8,7 +8,7 @@ using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Librarian")]
     public class CategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
@@ -21,6 +21,7 @@ namespace QuanLyThuVien.Web.Controllers
         }
 
         // categories/index
+        [HttpGet]
         public async Task<IActionResult> Index(string searchName)
         {
             var query = _context.Categories.AsQueryable();
@@ -30,17 +31,19 @@ namespace QuanLyThuVien.Web.Controllers
                 query = query.Where(c => c.Name.Contains(searchName));
             }
 
-            var categories = await query
+            var model = await query
                 .Select(c => new CategoryViewModel
                 {
                     Id = c.Id,
                     Name = c.Name,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    // Đếm số lượng sách liên kết với thể loại này
+                    BookCount = c.Books != null ? c.Books.Count : 0
                 })
                 .ToListAsync();
 
             ViewBag.SearchName = searchName;
-            return View(categories);
+            return View(model);
         }
 
 

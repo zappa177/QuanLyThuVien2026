@@ -8,7 +8,7 @@
     <!-- Modal -->
     <div class="modal fade" id="addBookModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0" style="background-color: #f4f4f4;">
+            <div class="modal-content border-1" style="background-color: #f4f4f4;">
                 <div class="modal-body p-4 position-relative">
 
                     <!-- Nút X tắt Modal -->
@@ -21,14 +21,14 @@
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Tên sách :</label>
                             <div class="col-7">
-                                <input type="text" name="Title" class="form-control form-control-sm border-0 rounded-0" required />
+                                <input type="text" name="Title" class="form-control form-control-sm border-1 rounded-0" required />
                             </div>
                         </div>
 
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Thể loại :</label>
                             <div class="col-7">
-                                <select name="CategoryId" class="form-select form-select-sm border-0 rounded-0" asp-items="ViewBag.Categories" required>
+                                <select name="CategoryId" class="form-select form-select-sm border-1 rounded-0" asp-items="ViewBag.Categories" required>
                                     <option value="">-- Chọn --</option>
                                 </select>
                             </div>
@@ -37,28 +37,28 @@
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Mã sách :</label>
                             <div class="col-8">
-                                <input type="text" name="ISBN" class="form-control form-control-sm border-0 rounded-0" required />
+                                <input type="text" name="ISBN" class="form-control form-control-sm border-1 rounded-0" required />
                             </div>
                         </div>
 
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Tác giả :</label>
                             <div class="col-8">
-                                <input type="text" name="Author" class="form-control form-control-sm border-0 rounded-0" required />
+                                <input type="text" name="Author" class="form-control form-control-sm border-1 rounded-0" required />
                             </div>
                         </div>
 
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Năm xuất bản :</label>
                             <div class="col-8">
-                                <input type="number" name="PublishYear" class="form-control form-control-sm border-0 rounded-0" required />
+                                <input type="number" name="PublishYear" class="form-control form-control-sm border-1 rounded-0" required />
                             </div>
                         </div>
 
                         <div class="row mb-2 align-items-center">
                             <label class="col-4 text-end mb-0">Nhà xuất bản :</label>
                             <div class="col-8">
-                                <input type="text" name="Publisher" class="form-control form-control-sm border-0 rounded-0" required />
+                                <input type="text" name="Publisher" class="form-control form-control-sm border-1 rounded-0" required />
                             </div>
                         </div>
 
@@ -72,7 +72,7 @@
 
                         <!-- Lưu -->
                         <div class="text-center mt-4">
-                            <button type="submit" class="btn btn-success px-5 rounded-0 border-0" id="btnSaveBook">Lưu</button>
+                            <button type="submit" class="btn btn-success px-5 rounded-0 border-1" id="btnSaveBook">Lưu</button>
                         </div>
 
                     </form>

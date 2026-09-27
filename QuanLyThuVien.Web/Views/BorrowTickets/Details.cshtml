@@ -25,19 +25,46 @@
 
             <div class="row mb-4 bg-light p-3 border">
                 <div class="col-md-6">
-                    <p class="mb-2">Người mượn: <strong>@(Model.User?.UserName ?? Model.User?.FullName)</strong></p>
+                    <p class="mb-2">
+                        Người mượn:
+                        <strong>
+                            @if (isStaff && Model.UserId != null)
+                            {
+                                <a asp-action="UserHistory" asp-controller="BorrowTickets" asp-route-userId="@Model.UserId" class="text-primary text-decoration-none" title="Xem hồ sơ mượn trả">
+                                     @(Model.User?.FullName ?? Model.User?.UserName)
+                                </a>
+                            }
+                            else
+                            {
+                                @(Model.User?.FullName ?? Model.User?.UserName)
+                            }
+                        </strong>
+                    </p>
                     <p class="mb-2">Lớp / Chức vụ: <strong>@(Model.User?.Position ?? "Không rõ")</strong></p>
                 </div>
                 <div class="col-md-6">
-                    <p class="mb-2">Tình trạng: <strong>@Model.Status</strong></p>
-                    <p class="mb-2">Ngày mượn: <strong>@Model.BorrowDate.ToString("dd/MM/yyyy HH:mm")</strong></p>
+                    <p class="mb-2">Tình trạng: <strong>@Model.Status.ToVietnamese()</strong></p>
+                    <p class="mb-2">Ngày mượn: <strong>@Model.BorrowDate.ToString("dd/MM/yyyy")</strong></p>
                     <p class="mb-2">Hạn trả: <strong>@Model.ExpectedReturnDate.ToString("dd/MM/yyyy")</strong></p>
+                    <p class="mb-2">Ngày trả thực tế: <strong>@Model.ActualReturnDate.Value.ToString("dd/MM/yyyy")</strong></p>
+
                 </div>
             </div>
-
+            @if (!string.IsNullOrEmpty(Model.Note))
+            {
+                <div class="alert alert-warning rounded-0 mb-4 border-warning">
+                    <h6 class="fw-bold mb-1 text-dark"> Ghi chú:</h6>
+                    <!-- Thuộc tính white-space: pre-line giúp hiển thị đúng các dấu xuống dòng (\n) trong CSDL -->
+                    <div class="text-dark" style="white-space: pre-line; font-size: 0.95rem;">
+                        @Model.Note
+                    </div>
+                </div>
+            }
             <h5 class="fw-bold mb-3 border-bottom pb-2">Danh sách sách yêu cầu</h5>
             @{
-                var groupedDetails = Model.TicketDetails.GroupBy(d => d.BookId).ToList();
+                var groupedDetails = Model.TicketDetails
+                    .GroupBy(d => d.BookId)
+                    .ToList();
             }
 
             <div class="mb-4">
@@ -53,6 +80,21 @@
 
                         <div class="flex-grow-1">
                             <h5 class="mb-1 fw-bold">@book?.Title</h5>
+                            <!--Hiển thị số lượng còn nợ ngay cạnh tên sách nếu quá hạn -->
+                            @if (Model.Status == BorrowStatus.Overdue)
+                            {
+                                int unreturnedCount = group.Count(d => d.IsReturned == false);
+                                if (unreturnedCount > 0)
+                                {
+                                    <span class="badge bg-danger ms-2" style="font-size: 0.75rem;">
+                                        Còn nợ: @unreturnedCount cuốn chưa trả
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary ms-2" style="font-size: 0.75rem;">Đã trả xong tựa này</span>
+                                }
+                            }
                             <div class="mb-2">Số lượng: @requiredQty cuốn</div>
 
                             @if (Model.Status == BorrowStatus.Pending)
@@ -90,20 +132,121 @@
                                     </div>
                                 }
                             }
-                            else if (Model.Status == BorrowStatus.Borrowing || Model.Status == BorrowStatus.Returned)
+                            else if (Model.Status == BorrowStatus.Borrowing || Model.Status == BorrowStatus.Overdue || Model.Status == BorrowStatus.Returned)
                             {
-                                <div class="mt-2">
-                                    <div class="fw-bold mb-1">Mã vật lý đang mượn:</div>
-                                    <div class="d-flex flex-wrap gap-2 return-badge-container">
-                                        @foreach (var detail in group)
-                                        {
-                                            <span class="border p-1 px-2 bg-light return-badge" data-code="@detail.BookCopy?.CopyCode.ToUpper()">@detail.BookCopy?.CopyCode</span>
-                                        }
-                                    </div>
-                                </div>
-                                if (Model.Status == BorrowStatus.Borrowing && isStaff)
+                                // Lấy TẤT CẢ các chi tiết đã được gán mã vật lý
+                                var allAssignedDetails = group.Where(d => d.BookCopy != null).ToList();
+                                
+                                // Đếm xem còn bao nhiêu cuốn CHƯA TRẢ trong nhóm sách này
+                                int activeQty = allAssignedDetails.Count(d => d.IsReturned == false);
+
+                                if (allAssignedDetails.Any())
                                 {
-                                    <div class="mt-3"><input type="text" class="form-control rounded-0 return-scanner" placeholder="Quét thu hồi sách khách trả vào đây..."></div>
+                                    <div class="mt-2">
+                                        <div class="fw-bold mb-1">Mã vật lý:</div>
+                                        <div class="d-flex flex-wrap gap-2 return-badge-container">
+                                            @foreach (var detail in allAssignedDetails)
+                                                {
+                                                @if (detail.IsReturned)
+                                                {
+                                                    // 1. SÁCH ĐÃ THU HỒI HOẶC SỰ CỐ ĐÃ ĐƯỢC GIẢI QUYẾT XONG
+                                                    // Check detail.IssueStatus
+                                                    @if (detail.IssueStatus == BookCopyStatus.Lost || detail.IssueStatus == BookCopyStatus.Damaged)
+                                                    {
+                                                        <!-- Mất/Hỏng đã đền bù xong (Xám + Gạch ngang) -->
+                                                        <span class="border p-1 px-2 bg-secondary text-white text-decoration-line-through opacity-75" title="Đã đền bù">
+                                                            <i class="fa-solid fa-check-circle me-1"></i> @detail.BookCopy?.CopyCode
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <!-- Trả bình thường (Xám ) -->
+                                                        <span class="border p-1 px-2 bg-secondary text-white opacity-75" title="Đã thu hồi">
+                                                            @detail.BookCopy?.CopyCode
+                                                        </span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    // 2. SÁCH CHƯA TRẢ HOẶC SỰ CỐ CHƯA GIẢI QUYẾT
+                                                    @if (detail.IssueStatus == BookCopyStatus.Lost)
+                                                    {
+                                                        <!-- Đang báo MẤT chờ xử lý -->
+                                                        <span class="border border-danger p-1 px-2 bg-white text-danger fw-bold"
+                                                              style="@(isStaff ? "cursor: pointer;" : "")"
+                                                            @(isStaff ? $"onclick=openResolveModal('{detail.BookCopy?.CopyCode}','Lost')" : "") title="@(isStaff ? "Bấm để xử lý đền bù" : "Đang chờ thư viện xử lý")">
+                                                            @detail.BookCopy?.CopyCode @(!isStaff ? "(Chờ xử lý)" : "")
+                                                        </span>
+                                                    }
+                                                    else if (detail.IssueStatus == BookCopyStatus.Damaged)
+                                                    {
+                                                        <!-- Đang báo HỎNG chờ xử lý -->
+                                                        <span class="border border-warning p-1 px-2 bg-warning text-dark fw-bold"
+                                                              style="@(isStaff ? "cursor: pointer;" : "")"
+                                                            @(isStaff ? $"onclick=openResolveModal('{detail.BookCopy?.CopyCode}','Damaged')" : "") title="@(isStaff ? "Bấm để xử lý đền bù" : "Đang chờ thư viện xử lý")">
+                                                            @detail.BookCopy?.CopyCode @(!isStaff ? "(Chờ xử lý)" : "")
+                                                        </span>
+                                                    }
+                                                    else
+                                                        {
+                                                            // sách đang mượn hoặc quá hạn
+                                                            if ((Model.Status == BorrowStatus.Borrowing || Model.Status == BorrowStatus.Overdue) && isStaff)
+                                                            {
+                                                                // Nếu quá hạn
+                                                                string borderClass = Model.Status == BorrowStatus.Overdue ? "border border-danger shadow-sm" : "border";
+                                                                string bgStyle = Model.Status == BorrowStatus.Overdue ? "background-color: #fff5f5;" : "bg-light";
+
+                                                                <div class="btn-group return-badge @borderClass" data-code="@detail.BookCopy?.CopyCode.ToUpper()" style="@bgStyle">
+                                                                    <!-- Badge mã vạch -->
+                                                                    <span class="bg-transparent @(Model.Status == BorrowStatus.Overdue ? "text-danger fw-bold" : "text-dark") px-2 py-1 d-flex align-items-center user-select-all">
+                                                                        @if (Model.Status == BorrowStatus.Overdue)
+                                                                        {
+                                                                            <i class="fa-solid fa-triangle-exclamation text-danger me-1" title="Sách chưa trả và đã quá hạn!"></i>
+                                                                        }
+                                                                        @detail.BookCopy?.CopyCode
+                                                                    </span>
+                                                                    <!-- Nút mũi tên dropdown -->
+                                                                    <button type="button" class="btn btn-sm @(Model.Status == BorrowStatus.Overdue ? "btn-outline-danger border-1" : "btn-light border") dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false" title="Báo sự cố">
+                                                                    </button>
+                                                                    <ul class="dropdown-menu dropdown-menu-end shadow rounded-0">
+                                                                        <li>
+                                                                            <a class="dropdown-item text-dark btn-report-issue" href="#" data-code="@detail.BookCopy?.CopyCode" data-issue="4">
+                                                                                Khách làm mất sách
+                                                                            </a>
+                                                                        </li>
+                                                                        <li>
+                                                                            <a class="dropdown-item text-dark btn-report-issue" href="#" data-code="@detail.BookCopy?.CopyCode" data-issue="3">
+                                                                                 Khách làm hỏng sách
+                                                                            </a>
+                                                                        </li>
+                                                                    </ul>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                // Chế độ chỉ xem cho Độc giả
+                                                                string readerStyle = Model.Status == BorrowStatus.Overdue ? "border border-danger text-danger fw-bold bg-white" : "border bg-light text-dark";
+                                                                <span class="@readerStyle p-1 px-2">
+                                                                    @if (Model.Status == BorrowStatus.Overdue)
+                                                                    {
+                                                                        <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                                    }
+                                                                    @detail.BookCopy?.CopyCode
+                                                                </span>
+                                                            }
+                                                        }
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Chỉ hiện ô quét khi phiếu đang Borrowing VÀ nhóm sách này VẪN CÒN cuốn chưa trả -->
+                                    if (Model.Status == BorrowStatus.Borrowing && isStaff && activeQty > 0)
+                                    {
+                                        <div class="mt-3">
+                                            <input type="text" class="form-control rounded-0 return-scanner" placeholder="Quét thu hồi sách khách trả vào đây...">
+                                        </div>
+                                    }
                                 }
                             }
                         </div>
@@ -118,6 +261,7 @@
                     {
                         <button type="button" class="btn btn-dark rounded-0 px-4 py-2" id="btnCheckInventory">Kiểm tra khả dụng</button>
                         <button type="button" class="btn btn-secondary rounded-0 px-5 py-2" id="btnApproveTicket" style="display:none;">Duyệt phiếu</button>
+                        <button type="button" class="btn btn-outline-danger rounded-0 px-4 py-2 ms-2 btn-cancel-ticket">Hủy phiếu</button>
                     }
                     else if (Model.Status == BorrowStatus.Accepted)
                     {
@@ -134,10 +278,20 @@
                         {
                             <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnConfirmHandover">Khách đã nhận sách</button>
                         }
+                        <button type="button" class="btn btn-outline-danger rounded-0 px-4 py-2 ms-2 btn-cancel-ticket">Hủy phiếu</button>
                     }
-                    else if (Model.Status == BorrowStatus.Borrowing)
+                    else if (Model.Status == BorrowStatus.Borrowing && isStaff)
                     {
-                        <button type="button" class="btn btn-dark rounded-0 px-5 py-2" id="btnConfirmReturn" disabled>Hoàn tất Thu Hồi</button>
+
+                        <!-- Cụm nút thao tác thu hồi -->
+                        <div class="mt-3 d-flex gap-2">
+                            <button type="button" class="btn btn-warning rounded-0 px-4 py-2 text-dark fw-bold" id="btnPartialReturn" disabled>
+                                Thu hồi phần đã quét
+                            </button>
+                            <button type="button" class="btn btn-dark rounded-0 px-4 py-2" id="btnConfirmReturn" disabled>
+                                Hoàn tất Thu Hồi (Tất cả)
+                            </button>
+                        </div>
                     }
                 </div>
             }
@@ -148,7 +302,7 @@
 <!-- Modal Gợi ý vị trí sách -->
 <div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content rounded-0 border-0 shadow">
+        <div class="modal-content rounded-0 border-1 shadow">
             <div class="modal-header border-bottom bg-info text-white rounded-0">
                 <h5 class="modal-title fw-bold"><i class="me-2"></i> Danh sách vị trí sách cần lấy</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -156,15 +310,61 @@
             <div class="modal-body p-4 bg-light" id="locationModalBody">
                 <div class="text-center text-muted"><i class=""></i><br>Đang tải dữ liệu...</div>
             </div>
-            <div class="modal-footer border-0 justify-content-center bg-light">
+            <div class="modal-footer border-1 justify-content-center bg-light">
                 <button type="button" class="btn btn-secondary px-5 rounded-0" data-bs-dismiss="modal">Đóng</button>
             </div>
         </div>
     </div>
 </div>
+<!-- Modal Xử lý đền bù sách Mất/Hỏng -->
+@if (isStaff)
+{
+    <div class="modal fade" id="resolveIssueModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-0 border-1 shadow">
+                <div class="modal-header border-bottom bg-dark text-white rounded-0">
+                    <h5 class="modal-title fw-bold">Xử lý đền bù mã sách: <span id="resolveBarcodeText" class="text-warning"></span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <form id="formResolveIssue">
+                    <input type="hidden" id="resolveBarcode" name="barcode" value="" />
+
+                    <div class="modal-body p-4 bg-light">
+                        <div class="mb-3">
+                            <label class="fw-bold mb-2">Hình thức giải quyết:</label>
+                            <select class="form-select rounded-0" id="resolveType" name="resolveType">
+                                <option value="1">Khách tìm thấy sách cũ và mang trả (Khôi phục mã sách)</option>
+                                <option value="2">Khách đền tiền (Ghi nhận đã thu tiền)</option>
+                                <option value="3">Khách đền cuốn sách mới (Ghi nhận chờ nhập kho)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="fw-bold mb-2">Ghi chú chi tiết (Số tiền đền, mô tả...):</label>
+                            <textarea class="form-control rounded-0" id="resolveNote" name="resolveNote" rows="3" placeholder="Ví dụ: Đã thu 50.000đ tiền phạt..." required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-1 bg-light justify-content-end">
+                        <button type="button" class="btn btn-secondary px-4 rounded-0" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-success px-4 rounded-0">Xác nhận xử lý</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
 
 @section Scripts {
     <script>
+        
+        // Mở modal giải quyết
+        function openResolveModal(barcode, currentStatus) {
+            document.getElementById('resolveBarcode').value = barcode;
+            document.getElementById('resolveBarcodeText').textContent = barcode;
+            document.getElementById('resolveNote').value = '';
+
+            new bootstrap.Modal(document.getElementById('resolveIssueModal')).show();
+        }
         document.addEventListener('DOMContentLoaded', function() {
             // Lấy các giá trị cần thiết
             const ticketIdElement = document.getElementById('ticketId');
@@ -178,7 +378,7 @@
                 const formData = new URLSearchParams();
                 for (const key in data) {
                     if (Array.isArray(data[key])) {
-                        // Xử lý mảng (ví dụ: scannedCodes) để khớp với ModelBinding của ASP.NET
+                        // Xử lý mảng  để khớp với ModelBinding của ASP.NET
                         data[key].forEach(val => formData.append(key, val));
                     } else {
                         formData.append(key, data[key]);
@@ -370,7 +570,7 @@
                 });
             }
 
-            // quét mã thu hồi sách
+            // Quét mã thu hồi sách
             document.querySelectorAll('.return-scanner').forEach(input => {
                 input.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
@@ -384,26 +584,96 @@
                         const badge = group.querySelector('.return-badge[data-code="' + barcode + '"]');
 
                         if (!badge) {
-                            alert("Mã này không đúng!");
+                            alert("Mã này không thuộc phiếu mượn này hoặc đã được thu hồi từ trước!");
                             return;
                         }
 
-                        if (badge.classList.contains('text-decoration-line-through')) {
+                        // Dùng class 'scanned-return'
+                        if (badge.classList.contains('scanned-return')) {
                             alert("Đã nhận lại mã này rồi!");
                             return;
                         }
 
-                        badge.classList.add('text-decoration-line-through', 'bg-secondary', 'text-white');
+                        // Đánh dấu khối này là đã quét
+                        badge.classList.add('scanned-return');
 
-                        // Nếu không còn badge nào chưa gạch ngang
-                        if (document.querySelectorAll('.return-badge:not(.text-decoration-line-through)').length === 0) {
-                            const btnConfirmReturn = document.getElementById('btnConfirmReturn');
-                            if (btnConfirmReturn) btnConfirmReturn.disabled = false;
-                            alert("Tuyệt vời! Khách đã trả đủ sách.");
+                        // Cập nhật giao diện: Đổi màu span bên trong thành xám (bg-secondary)
+                        const innerSpan = badge.querySelector('span');
+                        if (innerSpan) {
+                            innerSpan.classList.remove('bg-light', 'text-dark');
+                            innerSpan.classList.add('bg-secondary', 'text-white');
+                        }
+                        
+                        // Khóa nút mũi tên Dropdown báo sự cố
+                        const innerBtn = badge.querySelector('button');
+                        if (innerBtn) {
+                            innerBtn.classList.remove('btn-light');
+                            innerBtn.classList.add('btn-secondary');
+                            innerBtn.disabled = true;
+                        }
+
+                        // Tính số lượng badge đã được quét trong lần này
+                        const scannedCount = document.querySelectorAll('.return-badge.scanned-return').length;
+                        const totalBadges = document.querySelectorAll('.return-badge').length;
+
+                        // Bật sáng nút "Thu hồi phần đã quét" khi có ít nhất 1 cuốn được chọn
+                        const btnPartialReturn = document.getElementById('btnPartialReturn');
+                        if (btnPartialReturn) {
+                            btnPartialReturn.disabled = (scannedCount === 0);
+                        }
+
+                        // Bật nút "Hoàn tất Thu Hồi (Tất cả)" khi quét đủ 100% số sách còn lại
+                        const btnConfirmReturn = document.getElementById('btnConfirmReturn');
+                        if (btnConfirmReturn) {
+                            btnConfirmReturn.disabled = (scannedCount < totalBadges);
                         }
                     }
                 });
             });
+
+            // Sự kiện bấm nút Thu hồi phần đã quét
+            const btnPartialReturn = document.getElementById('btnPartialReturn');
+            if (btnPartialReturn) {
+                btnPartialReturn.addEventListener('click', function() {
+                    let scannedCodes = [];
+
+                    document.querySelectorAll('.return-badge.scanned-return').forEach(badge => {
+                        scannedCodes.push(badge.getAttribute('data-code'));
+                    });
+
+                    if (scannedCodes.length === 0) {
+                        alert("Vui lòng quét ít nhất một cuốn sách khách trả!");
+                        return;
+                    }
+
+                    if (!confirm(`Xác nhận thu hồi ${scannedCodes.length} cuốn sách đã quét? Các sách chưa trả sẽ tiếp tục được giữ lại trong phiếu.`)) {
+                        return;
+                    }
+
+                    this.disabled = true;
+                    this.textContent = 'Đang xử lý...';
+
+                    postData('/BorrowTickets/ConfirmPartialReturn', {
+                        ticketId: ticketId,
+                        scannedCodes: scannedCodes,
+                        __RequestVerificationToken: token
+                    }).then(res => {
+                        if (res.success) {
+                            alert(res.message);
+                            location.reload();
+                        } else {
+                            alert(res.message);
+                            this.disabled = false;
+                            this.textContent = 'Thu hồi phần đã quét';
+                        }
+                    }).catch(err => {
+                        console.error(err);
+                        alert("Có lỗi xảy ra khi kết nối máy chủ.");
+                        this.disabled = false;
+                        this.textContent = 'Thu hồi phần đã quét';
+                    });
+                });
+            }
 
             // Xác nhận thu hồi
             const btnConfirmReturn = document.getElementById('btnConfirmReturn');
@@ -451,7 +721,7 @@
                             let htmlContent = '';
                             data.forEach(item => {
                                 htmlContent += `
-                                <div class="card border-0 shadow-sm mb-3 rounded-0">
+                                <div class="card border-1 shadow-sm mb-3 rounded-0">
                                     <div class="card-header bg-white border-bottom fw-bold text-primary">
                                         <i class="me-2"></i> ${item.bookTitle} (Cần lấy: ${item.requiredQty} cuốn)
                                     </div>
@@ -495,6 +765,119 @@
                         });
                 });
             }
+            // Báo mất / Báo hỏng sách
+                document.querySelectorAll('.btn-report-issue').forEach(item => {
+                item.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                const barcode = this.getAttribute('data-code');
+                const issueType = this.getAttribute('data-issue');
+
+                // issueType === "4" là Mất sách, ngược lại là Hỏng sách
+                const issueName = issueType === "4" ? "MẤT SÁCH" : "HỎNG SÁCH";
+
+                if (!confirm(`Xác nhận ghi nhận mã vạch ${barcode} bị ${issueName}?\nHành động này không thể hoàn tác và sách sẽ bị chuyển trạng thái.`)) {
+                    return;
+                }
+
+                postData('/BorrowTickets/ReportBookIssue', {
+                    ticketId: ticketId,
+                    barcode: barcode,
+                    issueType: issueType,
+                    __RequestVerificationToken: token
+                }).then(res => {
+                    if (res.success) {
+                        alert(res.message);
+                        location.reload();
+                    } else {
+                        alert(res.message);
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert("Có lỗi xảy ra khi kết nối máy chủ.");
+                });
+            });
         });
+                //hủy phiếu
+                // Xử lý nút Hủy phiếu
+                    document.querySelectorAll('.btn-cancel-ticket').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const btnElement = this;
+
+                            // Hiện hộp thoại nhập lý do hủy (Có thể bỏ trống)
+                            const reason = prompt("Vui lòng nhập lý do hủy phiếu (nếu có):");
+
+
+                            if (reason === null) return;
+
+                            if (!confirm("Bạn có CHẮC CHẮN muốn HỦY phiếu mượn này không?\nHành động này không thể hoàn tác.")) {
+                                return;
+                            }
+
+                            // Khóa nút tránh bấm 2 lần
+                            const originalText = btnElement.textContent;
+                            btnElement.disabled = true;
+                            btnElement.textContent = 'Đang hủy...';
+
+                            postData('/BorrowTickets/CancelTicket', {
+                                ticketId: ticketId,
+                                reason: reason,
+                                __RequestVerificationToken: token
+                            }).then(res => {
+                                if (res.success) {
+                                    alert(res.message);
+                                    location.reload();
+                                } else {
+                                    alert(res.message);
+                                    btnElement.disabled = false;
+                                    btnElement.textContent = originalText;
+                                }
+                            }).catch(error => {
+                                console.error('Error:', error);
+                                alert("Có lỗi xảy ra khi kết nối máy chủ.");
+                                btnElement.disabled = false;
+                                btnElement.textContent = originalText;
+                            });
+                        });
+                    });
+            
+
+            // Bắt sự kiện Submit Form Xử lý đền bù
+            document.getElementById('formResolveIssue').addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const barcode = document.getElementById('resolveBarcode').value;
+                const resolveType = document.getElementById('resolveType').value;
+                const resolveNote = document.getElementById('resolveNote').value;
+                const btnSubmit = this.querySelector('button[type="submit"]');
+
+                if (!confirm(`Xác nhận khép lại sự cố cho mã ${barcode}?`)) return;
+
+                btnSubmit.disabled = true;
+                btnSubmit.textContent = "Đang xử lý...";
+
+                postData('/BorrowTickets/ResolveBookIssue', {
+                    ticketId: ticketId,
+                    barcode: barcode,
+                    resolveType: resolveType,
+                    resolveNote: resolveNote,
+                    __RequestVerificationToken: token
+                }).then(res => {
+                    if (res.success) {
+                        alert("Đã giải quyết sự cố thành công!");
+                        location.reload();
+                    } else {
+                        alert(res.message);
+                        btnSubmit.disabled = false;
+                        btnSubmit.textContent = "Xác nhận xử lý";
+                    }
+                }).catch(err => {
+                    console.error(err);
+                    alert("Lỗi kết nối đến máy chủ.");
+                    btnSubmit.disabled = false;
+                    btnSubmit.textContent = "Xác nhận xử lý";
+                });
+            });
+      });
     </script>
 }

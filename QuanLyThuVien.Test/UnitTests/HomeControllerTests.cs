@@ -43,7 +43,7 @@ namespace QuanLyThuVien.Test.Controllers
 
             var result = await controller.AddToCartDb(bookId: 1, quantity: 1) as JsonResult;
 
-            // CÁCH MỚI: Dùng RouteValueDictionary để đọc Anonymous Object
+
             var dict = new RouteValueDictionary(result!.Value);
 
             bool isSuccess = Convert.ToBoolean(dict["success"]);

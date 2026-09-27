@@ -13,6 +13,6 @@ namespace QuanLyThuVien.Web.Entities
         public string SettingValue { get; set; } = string.Empty;
 
         [MaxLength(255)]
-        public string? Description { get; set; } // Ghi chú để Admin hiểu cài đặt này làm gì
+        public string? Description { get; set; } // Ghi chú để hiểu cài đặt này làm gì
     }
 }

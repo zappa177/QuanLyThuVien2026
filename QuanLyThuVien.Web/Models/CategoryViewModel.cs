@@ -8,5 +8,6 @@ namespace QuanLyThuVien.Web.Models
         [Required(ErrorMessage = "Vui lòng nhập tên thể loại.")]
         public string Name { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        public int BookCount { get; set; }
     }
 }

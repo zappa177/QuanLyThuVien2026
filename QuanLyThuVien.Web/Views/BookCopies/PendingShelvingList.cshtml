@@ -1,0 +1,200 @@
+﻿@* /BookCopies/PendingShelvingList *@
+
+@model IEnumerable<QuanLyThuVien.Web.Entities.BookCopies>
+
+@{
+    ViewData["Title"] = "Quản lý sách chờ xếp lên kệ";
+    var shelves = ViewBag.Shelves as SelectList;
+}
+
+<div class="container-fluid mt-4">
+    <h3 class="fw-bold text-primary mb-3">Danh sách sách chờ xếp lên kệ</h3>
+
+    <div class="card border-1 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0 align-middle">
+                    <thead class="table-light text-nowrap text-center">
+                        <tr>
+                            <th>Mã bản sao</th>
+                            <th>Tên tựa sách</th>
+                            <th>Chọn Kệ sách</th>
+                            <th>Chọn Tầng sách</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted fst-italic">
+                                    Không có cuốn sách nào đang chờ xếp kệ tại quầy.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var copy in Model)
+                            {
+                                <tr id="row-@copy.Id">
+                                    <!-- Mã vật lý -->
+                                    <td class="fw-bold text-center">@copy.CopyCode</td>
+
+                                    <!-- Tên sách -->
+                                    <td>@copy.Book?.Title</td>
+
+                                    <!-- Dropdown Chọn Kệ (Mặc định chọn kệ hiện tại của sách) -->
+                                    <td style="width: 25%;">
+                                        <select class="form-select form-select-sm rounded-0 shelf-select"
+                                                data-copy-id="@copy.Id"
+                                                onchange="onShelfChange(@copy.Id, this.value)">
+                                            <option value="">-- Chọn kệ sách --</option>
+                                            @if (shelves != null)
+                                            {
+                                                foreach (var shelf in shelves)
+                                                {
+                                                    bool isSelected = copy.ShelfTier != null && copy.ShelfTier.ShelfId.ToString() == shelf.Value;
+                                                    <option value="@shelf.Value" selected="@isSelected">@shelf.Text</option>
+                                                }
+                                            }
+                                        </select>
+                                    </td>
+
+                                    <!-- Dropdown Chọn Tầng (Mặc định chọn tầng hiện tại của sách) -->
+                                    <td style="width: 20%;">
+                                        <select class="form-select form-select-sm rounded-0 tier-select"
+                                                id="tier-select-@copy.Id"
+                                                name="tierId">
+                                            <option value="@copy.ShelfTierId">@(copy.ShelfTier != null ? copy.ShelfTier.TierName : "-- Chọn tầng --")</option>
+                                        </select>
+                                    </td>
+
+                                    <!-- Nút hoàn thành -->
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-success rounded-0 px-3"
+                                                onclick="submitShelving(@copy.Id)">
+                                            <i class="fa-solid fa-check me-1"></i> Hoàn thành
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Tự động load danh sách tầng tương ứng cho từng cuốn sách dựa trên kệ đang được chọn sẵn
+            document.querySelectorAll('.shelf-select').forEach(select => {
+                let copyId = select.getAttribute('data-copy-id');
+                let shelfId = select.value;
+
+                // Lấy ra tầng hiện tại của bản sao được gán sẵn từ model (nếu có)
+                let row = document.getElementById('row-' + copyId);
+                let currentTierSelect = row.querySelector('.tier-select');
+                let preSelectedTierId = currentTierSelect.value; // Giá trị tầng cũ đang lưu ở option đầu tiên
+
+                if (shelfId) {
+                    loadTiersForCopy(copyId, shelfId, preSelectedTierId);
+                }
+            });
+        });
+
+        // Khi thay đổi Kệ -> Load lại danh sách Tầng của kệ đó
+        function onShelfChange(copyId, shelfId) {
+            loadTiersForCopy(copyId, shelfId, null);
+        }
+
+        function loadTiersForCopy(copyId, shelfId, selectedTierId) {
+            const tierSelect = document.getElementById('tier-select-' + copyId);
+            tierSelect.innerHTML = '<option value="">Đang tải...</option>';
+
+            if (!shelfId) {
+                tierSelect.innerHTML = '<option value="">-- Chọn tầng --</option>';
+                return;
+            }
+
+            // Đổi đúng tên hàm GetTiersByShelf
+            fetch('/Shelves/GetTiersByShelf?shelfId=' + shelfId)
+                .then(res => {
+                    if (!res.ok) throw new Error("Lỗi kết nối server");
+                    return res.json();
+                })
+                .then(data => {
+                    tierSelect.innerHTML = '<option value="">-- Chọn tầng --</option>';
+
+                    //Lấy danh sách tầng từ thuộc tính 'tiers' của object trả về
+                    const tiers = data.tiers;
+
+                    if (tiers && tiers.length > 0) {
+                        tiers.forEach(tier => {
+                            // Nếu capacity > 0 và số sách hiện tại đã đạt hoặc vượt quá sức chứa thì bỏ qua (không đưa vào dropdown)
+                            if (tier.capacity > 0 && tier.currentBooks >= tier.capacity) {
+                                return; // Bỏ qua tầng này vì đã đầy
+                            }
+
+                            let option = document.createElement('option');
+                            option.value = tier.id;
+                            option.textContent = `${tier.tierName} (Còn trống: ${tier.capacity > 0 ? (tier.capacity - tier.currentBooks) : 'Vô hạn'} cuốn)`;
+
+                            if (selectedTierId && option.value == selectedTierId) {
+                                option.selected = true;
+                            }
+
+                            tierSelect.appendChild(option);
+                        });
+                    } else {
+                        tierSelect.innerHTML = '<option value="">Kệ này chưa có tầng nào</option>';
+                    }
+                })
+                .catch(err => {
+                    console.error("Lỗi khi fetch tầng:", err);
+                    tierSelect.innerHTML = '<option value="">Lỗi tải tầng</option>';
+                });
+        }
+
+        // Gửi dữ liệu hoàn thành cất sách về Controller
+        function submitShelving(copyId) {
+            const row = document.getElementById('row-' + copyId);
+            const tierId = row.querySelector('.tier-select').value;
+
+            if (!tierId) {
+                alert("Vui lòng chọn tầng kệ hợp lệ trước khi hoàn thành!");
+                return;
+            }
+
+            const formData = new URLSearchParams();
+            formData.append('copyId', copyId);
+            formData.append('tierId', tierId);
+
+            fetch('/BookCopies/ConfirmShelving', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            })
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        // Xóa dòng đó khỏi bảng ngay lập tức hoặc reload lại trang
+                        row.remove();
+
+                        // Nếu bảng trống thì reload lại để hiện thông báo hết sách chờ
+                        if (document.querySelectorAll('tbody tr').length === 0) {
+                            location.reload();
+                        }
+                    } else {
+                        alert(res.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("Có lỗi xảy ra khi kết nối máy chủ.");
+                });
+        }
+    </script>
+}

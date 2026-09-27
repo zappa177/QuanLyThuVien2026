@@ -1,4 +1,5 @@
 ﻿using QuanLyThuVien.Web.Common;
+using QuanLyThuVien.Web.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace QuanLyThuVien.Web.Entities
@@ -22,5 +23,8 @@ namespace QuanLyThuVien.Web.Entities
 
         [MaxLength(255)]
         public string? Note { get; set; } // Ghi chú riêng cho tình trạng của cuốn sách này khi mượn/trả
+
+        public bool IsReturned { get; set; } = false;
+        public BookCopyStatus? IssueStatus { get; set; }
     }
 }

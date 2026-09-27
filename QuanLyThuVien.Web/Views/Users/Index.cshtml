@@ -49,7 +49,7 @@
     </form>
 
     <!-- Bảng danh sách người dùng -->
-    <div class="card border-0 shadow-sm">
+    <div class="card border-1 shadow-sm">
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-bordered mb-0 align-middle">
@@ -67,7 +67,12 @@
                         @foreach (var item in Model)
                         {
                             <tr>
-                                <td class="ps-3 text-nowrap">@item.FullName</td>
+                                <td class="ps-3 text-nowrap">
+                                    <a asp-controller="BorrowTickets" asp-action="UserHistory" asp-route-userId="@item.Id"
+                                       class="text-decoration-none fw-bold text-primary" title="Xem hồ sơ mượn sách">
+                                        @item.FullName
+                                    </a>
+                                </td>
                                 <td class="text-center text-nowrap">@item.Role</td>
                                 <td class="text-center text-nowrap">@(string.IsNullOrEmpty(item.UserCode) ? "" : item.UserCode)</td>
                                 <td class="text-center text-nowrap">@(string.IsNullOrEmpty(item.Position) ? "" : item.Position)</td>
@@ -79,6 +84,7 @@
                                        data-position="@item.Position">
                                         Chỉnh sửa
                                     </a>
+                                    
                                 </td>
                                 <td class="text-center text-nowrap">
                                     <form asp-action="ToggleStatus" asp-route-id="@item.Id" method="post" class="d-inline">
@@ -100,7 +106,7 @@
 <div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header border-1 pb-0">
                 <h5 class="modal-title fw-bold">Thêm người dùng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -141,7 +147,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 justify-content-center">
+                <div class="modal-footer border-1 justify-content-center">
                     <button type="submit" class="btn btn-success text-white px-5 rounded-0">Lưu</button>
                 </div>
             </form>
@@ -153,7 +159,7 @@
 <div class="modal fade" id="editUserModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-0 p-3">
-            <div class="modal-header border-0 pb-0">
+            <div class="modal-header border-1 pb-0">
                 <h5 class="modal-title fw-bold">Chỉnh sửa người dùng</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -188,7 +194,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 justify-content-center">
+                <div class="modal-footer border-1 justify-content-center">
                     <button type="submit" class="btn btn-success text-white px-5 rounded-0">Lưu</button>
                 </div>
             </form>

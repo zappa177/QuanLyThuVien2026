@@ -6,6 +6,7 @@
         OnHold = 1,     // Đang giữ chỗ
         Borrowed = 2,   // Đang được mượn
         Damaged = 3,    // Rách/Hỏng
-        Lost = 4        // Đã thất lạc
+        Lost = 4,       // Đã thất lạc
+        Pending = 5     // Đã trả chờ xếp lại lên kệ
     }
 }

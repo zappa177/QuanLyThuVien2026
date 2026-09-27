@@ -55,12 +55,13 @@ namespace QuanLyThuVien.Web.Controllers
                 {
                     Id = c.Id,
                     CopyCode = c.CopyCode,
-                    Location = c.ShelfTier != null ? $"{c.ShelfTier.Shelf!.Name} - {c.ShelfTier.TierName}" : "Chưa xếp kệ",
+                    Location = c.ShelfTier != null ? $"{c.ShelfTier.Shelf!.Name} - {c.ShelfTier.TierName}" : "Chờ xếp kệ",
                     ShelfId = c.ShelfTier?.ShelfId ?? 0,
                     TierId = c.ShelfTierId,
                     Status = c.Status,
                     IsReferenceOnly = c.IsReferenceOnly,
-                    IsActive = c.IsActive
+                    IsActive = c.IsActive,
+                    CreatedAt = c.CreatedAt
                 }).OrderBy(c => c.CopyCode).ToList()
             };
 
@@ -138,6 +139,49 @@ namespace QuanLyThuVien.Web.Controllers
             copy.IsActive = !copy.IsActive;
             await _context.SaveChangesAsync();
             return Json(new { success = true });
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> ConfirmShelving(int copyId, int? tierId)
+        {
+            var copy = await _context.BookCopies.FindAsync(copyId);
+            if (copy == null)
+            {
+                return Json(new { success = false, message = "Không tìm thấy bản sao." });
+            }
+
+            // Nếu thủ thư chọn tầng kệ mới thì cập nhật, nếu không thì giữ nguyên tầng kệ cũ sẵn có của bản sao
+            if (tierId.HasValue && tierId.Value > 0)
+            {
+                copy.ShelfTierId = tierId.Value;
+            }
+
+            // Đưa trạng thái về Available (sẵn sàng trên kệ)
+            copy.Status = BookCopyStatus.Available;
+
+            await _context.SaveChangesAsync();
+            return Json(new { success = true, message = "Đã xếp sách lên kệ thành công!" });
+        }
+
+        //danh sách sách chờ xếp lên kệ
+        [HttpGet]
+        [Authorize(Roles = "Admin, Librarian")]
+        public async Task<IActionResult> PendingShelvingList()
+        {
+            // Lấy tất cả các bản sao đang ở trạng thái Pending(chờ xếp)
+            var pendingCopies = await _context.BookCopies
+                .Include(bc => bc.Book)
+                .Include(bc => bc.ShelfTier)
+                    .ThenInclude(st => st!.Shelf)
+                .Where(bc => bc.Status == BookCopyStatus.Pending && bc.IsActive)
+                .OrderBy(bc => bc.Book!.Title)
+                .ToListAsync();
+
+            // Truyền danh sách Kệ/Tầng ra View để thủ thư chọn khi muốn cất sách lại đúng vị trí
+            ViewBag.Shelves = new SelectList(await _context.Shelves.Where(s => s.IsActive).ToListAsync(), "Id", "Name");
+
+            return View(pendingCopies);
         }
     }
 }

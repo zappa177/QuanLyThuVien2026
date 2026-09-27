@@ -21,5 +21,6 @@ namespace QuanLyThuVien.Web.Models
         public BookCopyStatus Status { get; set; }
         public bool IsReferenceOnly { get; set; }
         public bool IsActive { get; set; }
+        public DateTime? CreatedAt { get; set; } //ngày thêm bản sao sách
     }
 }

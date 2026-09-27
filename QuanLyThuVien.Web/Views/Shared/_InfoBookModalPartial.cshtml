@@ -2,7 +2,7 @@
 
 <div class="modal fade" id="infoBookModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0" style="background-color: #f4f4f4;">
+        <div class="modal-content border-1" style="background-color: #f4f4f4;">
             <div class="modal-body p-4 position-relative">
                 <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
                 <h5 class="text-center mb-4">Thông tin sách</h5>
@@ -16,7 +16,13 @@
                 <div class="row mb-2"><label class="col-5 text-end mb-0 text-muted">Tác giả :</label><div class="col-7 fw-bold" id="infoAuthor"></div></div>
                 <div class="row mb-2"><label class="col-5 text-end mb-0 text-muted">Năm XB :</label><div class="col-7 fw-bold" id="infoYear"></div></div>
                 <div class="row mb-2"><label class="col-5 text-end mb-0 text-muted">Nhà XB :</label><div class="col-7 fw-bold" id="infoPublisher"></div></div>
-
+                @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
+                {
+                    <div class="row mb-2">
+                        <label class="col-5 text-end mb-0 text-muted">Ngày thêm :</label>
+                        <div class="col-7 fw-bold " id="infoCreatedAt"></div>
+                    </div>
+                }
                 <!-- Hiển thị số lượng -->
                 <hr class="my-2 text-muted" />
                 <div class="row mb-2">
@@ -39,9 +45,9 @@
                     {
                         <!-- CÁC NÚT DÀNH RIÊNG CHO ADMIN -->
                         <div class="d-flex justify-content-center gap-2">
-                            <a href="#" id="btnManageCopies" class="btn btn-primary px-3 py-2 rounded-0 border-0">Quản lý bản sao</a>
-                            <button type="button" class="btn btn-warning px-3 py-2 rounded-0 border-0" id="btnOpenEdit">Chỉnh sửa</button>
-                            <button type="button" class="btn btn-danger px-3 py-2 rounded-0 border-0" id="btnToggleVisibility">Ẩn sách</button>
+                            <a href="#" id="btnManageCopies" class="btn btn-primary px-3 py-2 rounded-0 border-1">Quản lý bản sao</a>
+                            <button type="button" class="btn btn-warning px-3 py-2 rounded-0 border-1" id="btnOpenEdit">Chỉnh sửa</button>
+                            <button type="button" class="btn btn-danger px-3 py-2 rounded-0 border-1" id="btnToggleVisibility">Ẩn sách</button>
                         </div>
                     }
                     else if (User.IsInRole("Librarian") || User.IsInRole("Reader"))
@@ -52,7 +58,7 @@
                             <!-- Ô nhập số lượng mượn -->
                             <input type="number" id="infoQuantity" class="form-control text-center" value="1" min="1" style="width: 80px;" />
 
-                            <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-0 text-white" onclick="addToCartFromModal()">
+                            <button type="button" class="btn btn-success px-4 py-2 rounded-0 border-1 text-white" onclick="addToCartFromModal()">
                                 Thêm giỏ hàng
                             </button>
                         </div>
@@ -61,7 +67,7 @@
                         @if (User.IsInRole("Librarian"))
                         {
                             <div>
-                                <a href="#" id="btnUpdateCopiesStatus" class="btn btn-info px-4 py-2 rounded-0 border-0 text-white w-100">
+                                <a href="#" id="btnUpdateCopiesStatus" class="btn btn-info px-4 py-2 rounded-0 border-1 text-white w-100">
                                     Cập nhật tình trạng bản sao
                                 </a>
                             </div>

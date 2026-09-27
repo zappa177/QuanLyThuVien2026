@@ -74,6 +74,44 @@ namespace QuanLyThuVien.Web.Controllers
                 if (foundUser != null) targetUser = foundUser;
                 else return Json(new { success = false, message = $"Không tìm thấy người dùng: {targetUsername}" });
             }
+            //kiểm tra quá hạn
+            bool hasOverdueTickets = await _context.BorrowTickets
+                .AnyAsync(t => t.UserId == targetUser.Id
+                    && t.Status == BorrowStatus.Borrowing
+                    && t.ExpectedReturnDate < DateTime.Now);
+
+            if (hasOverdueTickets)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = "Tài khoản này đang có sách mượn quá hạn chưa trả. Vui lòng hoàn trả sách trước khi tạo phiếu mới!"
+                });
+            }
+            // Lấy giới hạn tối đa từ Setting của bạn (MaxBooksPerTicket)
+            var maxBooksSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "MaxBooksPerTicket");
+            int maxLimit = maxBooksSetting != null ? int.Parse(maxBooksSetting.SettingValue) : 60;
+
+            // Đếm số lượng sách user ĐANG GIỮ hoặc ĐANG CHỜ XỬ LÝ
+            int currentBorrowedCount = await _context.BorrowTicketDetails
+                .Include(d => d.BorrowTicket)
+                .Where(d => d.BorrowTicket.UserId == targetUser.Id
+                         && (d.BorrowTicket.Status == BorrowStatus.Borrowing
+                          || d.BorrowTicket.Status == BorrowStatus.Pending
+                          || d.BorrowTicket.Status == BorrowStatus.Accepted))
+                .CountAsync();
+
+            // Số sách đang muốn mượn đợt này
+            int requestingCount = cartItems.Sum(c => c.Quantity);
+
+            if (currentBorrowedCount + requestingCount > maxLimit)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = $"Vượt quá giới hạn! Tài khoản chỉ được giữ tối đa {maxLimit} cuốn sách cùng lúc. (Đang giữ/chờ: {currentBorrowedCount}, Yêu cầu thêm: {requestingCount})"
+                });
+            }
 
             // Lấy hạn trả sách từ Database (nếu không có thì mặc định là 7 ngày)
             var maxBorrowDaysSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.SettingKey == "MaxBorrowDays");

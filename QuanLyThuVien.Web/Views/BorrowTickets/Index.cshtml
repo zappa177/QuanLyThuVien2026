@@ -5,7 +5,7 @@
 
 <div class="container-fluid py-4">
     <!-- form tìm kiếm -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="card border-1 shadow-sm mb-4">
         <div class="card-body bg-light">
             <form id="searchForm" method="get" asp-action="Index">
                 <div class="row g-3 align-items-center">
@@ -13,7 +13,7 @@
                     <!-- Mã phiếu-->
                     <div class="col-md-3">
                         <label class="form-label mb-1">Mã phiếu</label>
-                        <input type="text" asp-for="SearchTicketId" class="form-control rounded-0 border-0" />
+                        <input type="text" asp-for="SearchTicketId" class="form-control rounded-0 border-1" />
                     </div>
 
                     <!-- chỉ admin và thủ thư hiện input tìm tên người mượn -->
@@ -21,29 +21,35 @@
                     {
                         <div class="col-md-3">
                             <label class="form-label mb-1">Tên người mượn</label>
-                            <input type="text" asp-for="SearchBorrower" class="form-control rounded-0 border-0" />
+                            <input type="text" asp-for="SearchBorrower" class="form-control rounded-0 border-1" />
                         </div>
                     }
 
                     <div class="col-md-2">
                         <label class="form-label mb-1">Từ ngày</label>
-                        <input type="date" asp-for="FromDate" class="form-control rounded-0 border-0" />
+                        <input type="date" asp-for="FromDate" class="form-control rounded-0 border-1" />
                     </div>
 
                     <div class="col-md-2">
                         <label class="form-label mb-1">Đến ngày</label>
-                        <input type="date" asp-for="ToDate" class="form-control rounded-0 border-0" />
+                        <input type="date" asp-for="ToDate" class="form-control rounded-0 border-1" />
                     </div>
 
                     <div class="col-md-2 d-flex flex-column justify-content-end">
                         <label class="form-label mb-1">Tình trạng</label>
-                        <select asp-for="Status" asp-items="Html.GetEnumSelectList<BorrowStatus>()" class="form-select rounded-0 border-0">
+                        <select asp-for="Status" class="form-select rounded-0 border-1">
                             <option value="">-- Tất cả --</option>
+                            <option value="@((int)BorrowStatus.Pending)">@BorrowStatus.Pending.ToVietnamese()</option>
+                            <option value="@((int)BorrowStatus.Accepted)">@BorrowStatus.Accepted.ToVietnamese()</option>
+                            <option value="@((int)BorrowStatus.Borrowing)">@BorrowStatus.Borrowing.ToVietnamese()</option>
+                            <option value="@((int)BorrowStatus.Overdue)">@BorrowStatus.Overdue.ToVietnamese()</option>
+                            <option value="@((int)BorrowStatus.Returned)">@BorrowStatus.Returned.ToVietnamese()</option>
+                            <option value="@((int)BorrowStatus.Canceled)">@BorrowStatus.Canceled.ToVietnamese()</option>
                         </select>
                     </div>
 
                     <div class="col-12 text-end mt-3">
-                        <button type="submit" class="btn btn-warning px-5 rounded-0 border-0">Tìm kiếm</button>
+                        <button type="submit" class="btn btn-warning px-5 rounded-0 border-1">Tìm kiếm</button>
                     </div>
                 </div>
             </form>
@@ -53,7 +59,7 @@
     <!-- sap xếp -->
     <div class="d-flex align-items-center mb-3">
         <span class="me-2">Sắp xếp :</span>
-        <select name="sortOrder" form="searchForm" class="form-select form-select-sm border-0 bg-info text-dark rounded-0 fw-bold w-auto" onchange="this.form.submit()">
+        <select name="sortOrder" form="searchForm" class="form-select form-select-sm border-1 bg-info text-dark rounded-0 fw-bold w-auto" onchange="this.form.submit()">
             @if (ViewBag.CurrentSort == "date_desc")
             {
                 <option value="date_desc" selected>Ngày mượn (Mới nhất)</option>
@@ -74,7 +80,7 @@
             @foreach (var ticket in Model.Tickets.Items)
             {
                 <div class="col-12 col-sm-6 col-md-4">
-                    <div class="card h-100 shadow-sm border-0" onclick="window.location.href='/BorrowTickets/Details/@ticket.Id'" style="cursor: pointer; background-color: #fcfcfc; transition: transform 0.2s;">
+                    <div class="card h-100 shadow-sm border-1" onclick="window.location.href='/BorrowTickets/Details/@ticket.Id'" style="cursor: pointer; background-color: #fcfcfc; transition: transform 0.2s;">
                         <div class="card-body text-center p-4">
                             <h4 class="fw-bold mb-3">Phiếu số @ticket.Id</h4>
                             <div class="text-start" style="font-size: 0.9rem;">
@@ -82,7 +88,7 @@
                                 <p class="mb-1">Lớp / Chức vụ : <span class="fw-bold text-primary">@(ticket.User?.Position ?? "Không rõ")</span></p>
                                 <p class="mb-1">Mã định danh : <span class="fw-bold text-primary">@(ticket.User?.UserCode ?? "Không rõ")</span></p>
                                 <p class="mb-1">Ngày mượn : @ticket.BorrowDate.ToString("dd/MM/yyyy")</p>
-                                <p class="mb-3">Tình trạng : <span class="fw-bold">@ticket.Status</span></p>
+                                <p class="mb-3">Tình trạng : <span class="fw-bold">@ticket.Status.ToVietnamese()</span></p>
                                 <p class="mb-1">Chú thích :</p>
                                 <div class="bg-light p-2" style="min-height: 80px; border: 1px solid #eee;">
                                     @ticket.Note
@@ -105,7 +111,7 @@
     @if (Model.Tickets != null && Model.Tickets.TotalPages > 1)
     {
         <div class="d-flex justify-content-center mt-5">
-            <ul class="pagination border-0">
+            <ul class="pagination border-1">
 
                 <!-- Nút Trước  -->
                 <li class="page-item @(Model.Tickets.PageNumber <= 1 ? "disabled" : "")">

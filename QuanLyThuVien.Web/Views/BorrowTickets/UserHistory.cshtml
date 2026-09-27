@@ -1,0 +1,193 @@
+﻿ @*/borrowtickets/userhistory?userId=12345*@
+@using QuanLyThuVien.Web.EnumExtensions
+
+@model IEnumerable<QuanLyThuVien.Web.Entities.BorrowTickets>
+@using QuanLyThuVien.Web.Enums
+@{
+    ViewData["Title"] = "Hồ sơ mượn trả độc giả";
+    var user = ViewBag.UserInfo as QuanLyThuVien.Web.Entities.Identity.ApplicationUser;
+}
+
+<div class="container py-4" style="max-width: 1000px;">
+    <a href="javascript:history.back()" class="btn btn-outline-dark rounded-0 mb-3">
+        <i class="fa-solid fa-arrow-left me-1"></i> Quay lại
+    </a>
+
+    <!-- thông tin cá nhân -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card rounded-0 border h-100 bg-light">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <i class="fa-solid fa-circle-user text-secondary" style="font-size: 4rem;"></i>
+                    </div>
+                    <h5 class="fw-bold text-center mb-1">@(user?.FullName ?? user?.UserName)</h5>
+                    <p class="text-center text-muted mb-3">Mã : @(user?.UserCode ?? "Chưa cập nhật")</p>
+                    <hr />
+                    <p class="mb-1"><i class="fa-solid fa-briefcase me-2 text-muted"></i> <strong>Chức vụ:</strong> @(user?.Position ?? "N/A")</p>
+                    <p class="mb-1"><i class="fa-solid fa-envelope me-2 text-muted"></i> <strong>Email:</strong> @user?.Email</p>
+                    <p class="mb-0"><i class="fa-solid fa-phone me-2 text-muted"></i> <strong>SĐT:</strong> @(user?.PhoneNumber ?? "N/A")</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="row g-3 h-100">
+                <div class="col-6">
+                    <div class="card rounded-0 border border-primary h-100">
+                        <div class="card-body text-center">
+                            <h2 class="text-primary fw-bold">@ViewBag.TotalBorrowed</h2>
+                            <p class="mb-0 text-muted">Tổng số phiếu mượn</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card rounded-0 border border-success h-100">
+                        <div class="card-body text-center">
+                            <h2 class="text-success fw-bold">@ViewBag.ActiveTickets</h2>
+                            <p class="mb-0 text-muted">Phiếu đang mượn</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card rounded-0 border border-danger h-100 bg-danger text-white">
+                        <div class="card-body text-center">
+                            <h2 class="fw-bold">@ViewBag.OverdueTickets</h2>
+                            <p class="mb-0">Số lần mượn quá hạn</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card rounded-0 border border-warning h-100 bg-warning text-dark">
+                        <div class="card-body text-center">
+                            <h2 class="fw-bold">@ViewBag.Violations</h2>
+                            <p class="mb-0">Sách làm mất / hỏng</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- bảng lịch sử phiếu -->
+    <h5 class="fw-bold mb-3 border-bottom pb-2">Chi tiết lịch sử mượn</h5>
+    <div class="card rounded-0 border">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã Phiếu</th>
+                        <th>Ngày mượn</th>
+                        <th>Hạn trả</th>
+                        <th>Tên sách mượn</th>
+                        <th class="text-center">Trạng thái</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Any())
+                    {
+                        <tr><td colspan="6" class="text-center py-4">Độc giả này chưa mượn cuốn sách nào.</td></tr>
+                    }
+                    @foreach (var ticket in Model)
+                    {
+                        bool isOverdue = ticket.Status == BorrowStatus.Overdue || (ticket.Status == BorrowStatus.Borrowing && DateTime.Now.Date > ticket.ExpectedReturnDate.Date);
+
+                        <tr class="@(isOverdue ? "table-danger" : "")">
+                            <td class="fw-bold">#@ticket.Id</td>
+                            <td>@ticket.BorrowDate.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @ticket.ExpectedReturnDate.ToString("dd/MM/yyyy")
+                                @if (isOverdue)
+                                {
+                                    <br /><small class="text-danger fw-bold"><i class="fa-solid fa-warning"></i> Trễ hạn</small>
+                                }
+                            </td>
+                            <td>
+                                <ul class="mb-0 ps-3 list-unstyled" style="font-size: 0.9rem;">
+                                    @foreach (var detail in ticket.TicketDetails)
+                                    {
+                                        <li class="mb-1">
+                                            <i class="fa-solid fa-book-open text-muted me-1" style="font-size: 0.8rem;"></i>
+                                            <strong>@detail.Book?.Title</strong>
+
+                                            @if (ticket.Status == BorrowStatus.Canceled)
+                                            {
+                                                <!-- ƯU TIÊN 1: NẾU PHIẾU ĐÃ BỊ HỦY -->
+                                                if (detail.BookCopyId != null)
+                                                {
+                                                    <span class="text-muted">(Mã: @detail.BookCopy?.CopyCode)</span>
+                                                }
+                                                <span class="badge bg-secondary ms-1">Đã hủy</span>
+                                            }
+                                            else if (detail.BookCopyId != null)
+                                            {
+                                                <!-- ƯU TIÊN 2: PHIẾU BÌNH THƯỜNG VÀ SÁCH ĐÃ ĐƯỢC GÁN MÃ VẬT LÝ -->
+                                                <span class="text-muted">(Mã: @detail.BookCopy?.CopyCode)</span>
+
+                                                @if (detail.IsReturned)
+                                                {
+                                                    if (detail.IssueStatus == BookCopyStatus.Lost || detail.IssueStatus == BookCopyStatus.Damaged)
+                                                    {
+                                                        <span class="badge bg-warning text-dark ms-1">Đã đền bù</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="badge bg-success ms-1">Đã trả</span>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    if (detail.IssueStatus == BookCopyStatus.Lost)
+                                                    {
+                                                        <span class="badge bg-danger ms-1">Báo mất (chưa đền)</span>
+                                                    }
+                                                    else if (detail.IssueStatus == BookCopyStatus.Damaged)
+                                                    {
+                                                        <span class="badge bg-warning text-dark ms-1">Báo hỏng (chưa đền)</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        if (isOverdue)
+                                                        {
+                                                            <span class="badge bg-danger ms-1">Quá hạn chưa trả</span>
+                                                        }
+                                                        else if (ticket.Status == BorrowStatus.Borrowing)
+                                                        {
+                                                            <span class="badge bg-info text-dark ms-1">Đang mượn</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-light text-dark border ms-1">Đang giữ chỗ</span>
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark border ms-1">Chờ giao sách</span>
+                                            }
+                                        </li>
+                                    }
+                                </ul>
+                            </td>
+                            <td class="text-center">
+                                @if (isOverdue)
+                                {
+                                    <span class="badge bg-danger">Quá hạn</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@ticket.Status.ToVietnamese()</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <a asp-action="Details" asp-controller="BorrowTickets" asp-route-id="@ticket.Id" class="btn btn-sm btn-dark rounded-0">Chi tiết</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

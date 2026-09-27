@@ -17,44 +17,57 @@
 
         <!-- Menu dùng chung: Tìm kiếm Sách -->
         <li class="nav-item w-100 border-bottom">
-            <a asp-controller="Home" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Home" ? "bg-primary text-white" : "text-dark")">
+            <a asp-controller="Home" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "Home" ? "bg-primary text-white" : "text-dark")">
                 <span class="">Tìm kiếm sách</span>
             </a>
         </li>
 
         <!-- Menu dùng chung: Danh sách phiếu mượn -->
         <li class="nav-item w-100 border-bottom">
-            <a asp-controller="BorrowTickets" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "BorrowTickets" ? "bg-primary text-white" : "text-dark")">
+            <a asp-controller="BorrowTickets" asp-action="Index" class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "BorrowTickets" ? "bg-primary text-white" : "text-dark")">
                 <span class="">Danh sách phiếu mượn</span>
             </a>
         </li>
-
+        <!--danh sách sách chờ xếp lại lên kệ-->
+        @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
+        {
+            <li class="nav-item w-100 border-bottom">
+                <a asp-controller="BookCopies" asp-action="PendingShelvingList"
+                class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "BookCopies" && ViewContext.RouteData.Values["action"]?.ToString() == "PendingShelvingList" ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Sách chờ xếp kệ</span>
+                </a>
+            </li>
+        }
         <!-- Menu: Quản lý thông tin (Phân quyền theo Role) -->
         <li class="nav-item w-100 border-bottom">
-            @if (User.IsInRole("Admin"))
+            @if (User.IsInRole("Admin") || User.IsInRole("Librarian"))
             {
                 <!-- Nếu là Admin: Trỏ về trang quản lý hệ thống (Kệ sách, Thể loại, Người dùng) -->
                 <a asp-controller="Shelves" asp-action="Index"
-                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(isManagementActive ? "bg-primary text-white" : "text-dark")">
-                    <span class="">Quản lý thông tin</span>
+                   class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(isManagementActive ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Quản lý thông tin hệ thống</span>
                 </a>
             }
-            else
-            {
+            
+        </li>
+        <!--quan ly thong tin cá nhân cho thủ thư và khách-->
+        @if (!User.IsInRole("Admin"))
+        {
+            <li class="nav-item w-100 border-bottom">
                 <!-- Nếu là Thủ thư hoặc Khách: Trỏ về trang chỉnh sửa thông tin cá nhân của chính họ -->
                 <a asp-controller="Profile" asp-action="Edit"
-                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(isProfileActive ? "bg-primary text-white" : "text-dark")">
-                    <span class="">Quản lý thông tin</span>
+                   class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(isProfileActive ? "bg-primary text-white" : "text-dark")">
+                    <span class="">Quản lý thông tin cá nhân</span>
                 </a>
-            }
-        </li>
+            </li>
+        }
 
         <!-- Menu: Báo cáo thống kê cho admin -->
         @if (User.IsInRole("Admin"))
         {
             <li class="nav-item w-100 border-bottom">
                 <a asp-controller="Reports" asp-action="Index"
-                   class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Reports" ? "bg-primary text-white" : "text-dark")">
+                   class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "Reports" ? "bg-primary text-white" : "text-dark")">
                     <span class="">Báo cáo thống kê</span>
                 </a>
             </li>
@@ -65,7 +78,7 @@
         {
             <li class="nav-item w-100 border-bottom">
                 <a asp-controller="Settings" asp-action="Index"
-                    class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Settings" ? "bg-primary text-white" : "text-dark")">
+                    class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "Settings" ? "bg-primary text-white" : "text-dark")">
                     <span class="">Cài đặt hệ thống</span>
                 </a>
             </li>
@@ -74,7 +87,7 @@
         <!-- Menu: Đổi mật khẩu -->
         <li class="nav-item w-100 border-bottom">
             <a asp-controller="Account" asp-action="ChangePassword"
-               class="nav-link px-3 py-3 rounded-0 border-0 fs-5 d-block @(currentController == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "ChangePassword" ? "bg-primary text-white" : "text-dark")">
+               class="nav-link px-3 py-3 rounded-0 border-1 fs-5 d-block @(currentController == "Account" && ViewContext.RouteData.Values["action"]?.ToString() == "ChangePassword" ? "bg-primary text-white" : "text-dark")">
                 <span class="">Đổi mật khẩu</span>
             </a>
         </li>

@@ -141,6 +141,13 @@ namespace QuanLyThuVien.Web.Data
                       .WithMany(bc => bc.BorrowTicketDetails)
                       .HasForeignKey(btd => btd.BookCopyId)
                       .OnDelete(DeleteBehavior.Restrict); // Có thể null ban đầu
+                entity.Property(e => e.IsReturned)
+                      .IsRequired()
+                      .HasDefaultValue(false);
+                entity.Property(e => e.IssueStatus)
+                       .HasConversion<String>()
+                       .IsRequired(false)
+                       .HasColumnType("varchar(20)");
             });
 
             // 10. Cấu hình CartItems

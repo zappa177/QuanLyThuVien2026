@@ -27,16 +27,17 @@
     </div>
 
     <!-- Bảng danh sách -->
-    <div class="card border-0 shadow-sm">
+    <div class="card border-1 shadow-sm">
         <div class="card-body p-0">
             <table class="table table-bordered table-hover align-middle text-center mb-0">
                 <thead class="table-light">
                     <tr>
                         <th style="width: 5%;">#</th>
-                        <th style="width: 15%;">Mã bản sao</th>
-                        <th style="width: 25%;">Vị trí lưu trữ</th>
-                        <th style="width: 15%;">Tình trạng</th>
+                        <th style="width: 10%;">Mã bản sao</th>
+                        <th style="width: 10%;">Vị trí lưu trữ</th>
+                        <th style="width: 10%;">Tình trạng</th>
                         <th style="width: 15%;">Quy định mượn</th>
+                        <th style="width: 15%;">Ngày thêm </th>
                         <th style="width: 25%;">Thao tác</th>
                     </tr>
                 </thead>
@@ -51,26 +52,35 @@
                                 <td class="fw-bold">@item.CopyCode</td>
                                 <td>@item.Location</td>
                                 <td>
-                                    <!-- Màu sắc sinh động cho Tình trạng -->
                                     <span class="badge @(item.Status == BookCopyStatus.Available ? "bg-success" : item.Status == BookCopyStatus.OnHold ? "bg-warning text-dark" : item.Status == BookCopyStatus.Borrowed ? "bg-primary" : "bg-danger")">
-                                        @item.Status
+                                        @item.Status.ToVietnamese()
                                     </span>
                                 </td>
                                 <td>
                                     @if (item.IsReferenceOnly)
                                     {
-                                        <span class="text-danger fw-bold"><i class="fa-solid fa-ban"></i> Chỉ đọc tại chỗ</span>
+                                        <span class="text-danger fw-bold"> Chỉ đọc tại chỗ</span>
                                     }
                                     else
                                     {
-                                        <span class="text-success"><i class="fa-solid fa-check"></i> Được mượn về</span>
+                                        <span class="text-success"> Được mượn về</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    @if (item.CreatedAt != null)
+                                    {
+                                        <span class="text-muted"> @item.CreatedAt.Value.ToString("dd/MM/yyyy")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Không xác định</span>
                                     }
                                 </td>
                                 <td>
                                     <!-- Nút Sửa vị trí / Trạng thái -->
                                     <button class="btn btn-sm btn-primary rounded-0 me-2 px-3"
                                             onclick="openEditCopyModal(@item.Id, '@item.CopyCode', @item.ShelfId, @item.TierId, '@((int)item.Status)', @(item.IsReferenceOnly.ToString().ToLower()))">
-                                        <i class="fa-solid fa-pen-to-square"></i> Cập nhật
+                                         Cập nhật
                                     </button>
 
                                     <!-- Nút Ẩn/Hiện (Chỉ Admin) -->
@@ -78,7 +88,7 @@
                                     {
                                         <button class="btn btn-sm @(item.IsActive ? "btn-danger" : "btn-secondary") rounded-0"
                                                 onclick="toggleCopyStatus(@item.Id)">
-                                            @(item.IsActive ? "Báo mất/Ẩn" : "Hiện lại")
+                                            @(item.IsActive ? "Ẩn" : "Hiện")
                                         </button>
                                     }
                                 </td>
@@ -100,7 +110,7 @@
 <!-- modal thêm sửa bản sao -->
 <div class="modal fade" id="copyModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-0 border-0 shadow">
+        <div class="modal-content rounded-0 border-1 shadow">
             <div class="modal-header border-bottom bg-light">
                 <h5 class="modal-title fw-bold text-primary" id="copyModalTitle">Cập nhật bản sao</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -153,7 +163,7 @@
                 </div>
 
                 <div class="modal-footer border-top bg-light justify-content-center">
-                    <button type="submit" class="btn btn-success px-5 rounded-0 border-0 fw-bold">Lưu thông tin</button>
+                    <button type="submit" class="btn btn-success px-5 rounded-0 border-1 fw-bold">Lưu thông tin</button>
                 </div>
             </form>
         </div>
@@ -210,14 +220,13 @@
                     tierSelect.disabled = false;
                     isReferenceOnly.disabled = false;
 
-                    // Chốt chặn Validation ở phía Client (Trình duyệt)
                     const tierId = tierSelect.value;
                     if (!tierId || tierId == "0") {
                         alert("Vui lòng chọn Kệ và Tầng hợp lệ trước khi lưu!");
                         return; // Dừng lại, không gửi lên Server nữa
                     }
 
-                    // Gom dữ liệu và gửi đi (Sử dụng URLSearchParams để mô phỏng jQuery .serialize())
+                    // Gom dữ liệu và gửi đi 
                     const formData = new URLSearchParams(new FormData(this)).toString();
                     
                     fetch('/BookCopies/SaveCopy', {

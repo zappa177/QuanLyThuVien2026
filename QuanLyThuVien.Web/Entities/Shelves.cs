@@ -11,7 +11,7 @@ namespace QuanLyThuVien.Web.Entities
 
         [Required]
         [MaxLength(50)]
-        public required string Name { get; set; } // Dãy kệ (VD: kệ sách 1)
+        public required string Name { get; set; } // Dãy kệ ( kệ sách 1)
         //1 kệ có nhiều tầng
         public virtual ICollection<ShelfTiers> ShelfTiers { get; set; } = new List<ShelfTiers>();
     }

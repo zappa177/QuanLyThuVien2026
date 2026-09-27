@@ -8,7 +8,7 @@ using QuanLyThuVien.Web.Models;
 
 namespace QuanLyThuVien.Web.Controllers
 {
-    [Authorize(Roles = "Admin")] // Chỉ có Admin được quản lý người dùng
+    [Authorize(Roles = "Admin,Librarian")] // Chỉ có Admin được quản lý người dùng
     public class UsersController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;

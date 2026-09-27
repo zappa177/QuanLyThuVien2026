@@ -11,7 +11,7 @@
         <label class="fs-5 me-3 text-dark mb-0">Thống kê theo</label>
         <form method="get" asp-action="Index" id="reportForm" class="mb-0">
             <!-- onchange="this.form.submit()" giúp tự động tải lại bảng khi người dùng chọn dòng khác -->
-            <select name="reportType" class="form-select form-select-lg rounded-0 border-0 shadow-sm" style="width: 350px;" onchange="this.form.submit()">
+            <select name="reportType" class="form-select form-select-lg rounded-0 border-1 shadow-sm" style="width: 350px;" onchange="this.form.submit()">
                 <option value="category" selected="@(currentReportType == "category")">Thể loại</option>
                 <option value="status" selected="@(currentReportType == "status")">Tình trạng sách</option>
                 <option value="top10" selected="@(currentReportType == "top10")">10 sách được mượn nhiều nhất</option>

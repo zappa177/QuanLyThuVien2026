@@ -20,7 +20,7 @@
         {
             @foreach (var item in Model)
             {
-                <div class="card border-0 shadow-sm mb-3 align-items-center flex-row p-3 cart-row" id="cart-item-@item.Id" style="background-color: #ffffff;">
+                <div class="card border-1 shadow-sm mb-3 align-items-center flex-row p-3 cart-row" id="cart-item-@item.Id" style="background-color: #ffffff;">
                     <!-- Ảnh bìa sách -->
                     <div class="text-center me-4" style="width: 100px; height: 120px; background-image: url('/images/transparent-grid.png'); background-size: cover;">
                         <img src="@(string.IsNullOrEmpty(item.Book?.CoverImage) ? "/images/no-cover.png" : item.Book.CoverImage)"
@@ -60,7 +60,7 @@
 
             <!-- Nút Tạo phiếu mượn -->
             <div class="text-center mt-5">
-                <button type="button" id="btnCreateTicket" class="btn btn-success px-5 py-3 rounded-0 border-0 fw-bold fs-5 text-white shadow-sm" onclick="createBorrowTicket()">
+                <button type="button" id="btnCreateTicket" class="btn btn-success px-5 py-3 rounded-0 border-1 fw-bold fs-5 text-white shadow-sm" onclick="createBorrowTicket()">
                     <i class="fa-solid fa-check me-2"></i> Xác nhận mượn sách
                 </button>
             </div>
