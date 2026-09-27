@@ -46,7 +46,17 @@
                     <p class="mb-2">Tình trạng: <strong>@Model.Status.ToVietnamese()</strong></p>
                     <p class="mb-2">Ngày mượn: <strong>@Model.BorrowDate.ToString("dd/MM/yyyy")</strong></p>
                     <p class="mb-2">Hạn trả: <strong>@Model.ExpectedReturnDate.ToString("dd/MM/yyyy")</strong></p>
-                    <p class="mb-2">Ngày trả thực tế: <strong>@Model.ActualReturnDate.Value.ToString("dd/MM/yyyy")</strong></p>
+                    <p class="mb-2">
+                        Ngày trả: 
+                        @if (Model.ActualReturnDate.HasValue)
+                        {
+                            @Model.ActualReturnDate.Value.ToString("dd/MM/yyyy")
+                        }
+                        else
+                        {
+                            <span class="text-muted">Chưa trả</span>
+                        }
+                    </p>
 
                 </div>
             </div>
